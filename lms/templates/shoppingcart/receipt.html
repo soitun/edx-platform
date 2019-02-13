@@ -4,6 +4,7 @@
 <%inherit file="shopping_cart_flow.html" />
 <%!
 from django.utils.translation import ugettext as _
+from openedx.core.djangolib.markup import HTML, Text
 from django.utils.translation import ungettext
 from django.urls import reverse
 from markupsafe import escape
@@ -35,30 +36,40 @@ from openedx.core.lib.courses import course_image_url
           <% dashboard_url = reverse('dashboard') %>
           <a href="${dashboard_url}" class="blue pull-right">${_("View Dashboard")} <span class="icon fa fa-caret-right" aria-hidden="true"></span></a>
           <span class="mt-7">
-            ${_(u"You have successfully been enrolled for {course_names}. "
-                u"The following receipt has been emailed to {receipient_emails}").format(
-                  course_names=u"<b>{course_names}</b>".format(
-                    course_names=escape(appended_course_names)
-                  ),
-                  receipient_emails=u"<strong>{receipient_emails}</strong>".format(
-                    receipient_emails=appended_recipient_emails
-                  ),
+            ${Text(_(u"You have successfully been enrolled for {course_names}. "
+                u"The following receipt has been emailed to {receipient_emails}")).format(
+                course_names=Text(u"{b_start}{course_names}{b_end}").format(
+                    b_start=HTML('<b>'),
+                    b_end=HTML('</b>'),
+                    course_names=appended_course_names
+              ),
+                receipient_emails=Text(u"{strong_start}{receipient_emails}{strong_end}").format(
+                    receipient_emails=appended_recipient_emails,
+                    strong_start=HTML('<strong>'),
+                    strong_end=HTML('</strong>')
+              ),
             )}
           </span>
         % elif order_type == 'business':
-          ${ungettext(
-            "You have successfully purchased <b>{number} course registration code</b> for {course_names}.",
-            "You have successfully purchased <b>{number} course registration codes</b> for {course_names}.",
+          ${Text(ungettext(
+            "You have successfully purchased {b_start}{number} course registration code{b_end} for {course_names}.",
+            "You have successfully purchased {b_start}{number} course registration codes{b_end} for {course_names}.",
             total_registration_codes
-          ).format(
+          )).format(
+            b_start=HTML('<b>'),
+            b_end=HTML('</b>'),
             number=total_registration_codes,
-            course_names=u"<b>{course_names}</b>".format(
-              course_names=escape(appended_course_names)
+            course_names=Text(u"{b_start}{course_names}{b_end}").format(
+              course_names=appended_course_names,
+                b_start=HTML('<b>'),
+                b_end=HTML('</b>')
             )
           )}
-          ${_("The following receipt has been emailed to {receipient_emails}").format(
-            receipient_emails=u"<strong>{receipient_emails}</strong>".format(
+          ${Text(_("The following receipt has been emailed to {receipient_emails}")).format(
+            receipient_emails=Text(u"{strong_start}{receipient_emails}{strong_end}").format(
               receipient_emails=appended_recipient_emails,
+                strong_start=HTML('<strong>'),
+                strong_end=HTML('</strong>')
             )
           )}
         % endif
