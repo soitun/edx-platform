@@ -120,7 +120,7 @@ from six import string_types
             ${course.display_name_with_default_escaped}
           </h1>
           <br />
-          <span>${course.display_org_with_default | h}</span>
+          <span>${course.display_org_with_default}</span>
         </div>
 
         <div class="main-cta">
@@ -184,7 +184,7 @@ from six import string_types
               href_class = "register"
           %>
           <a href="${reg_href}" class="${href_class}">
-            ${_("Enroll in {course_name}").format(course_name=course.display_number_with_default) | h}
+            ${_("Enroll in {course_name}").format(course_name=course.display_number_with_default)}
           </a>
           <div id="register_error"></div>
         %endif
@@ -233,7 +233,7 @@ from six import string_types
 
         <%block name="course_about_important_dates">
         <ol class="important-dates">
-          <li class="important-dates-item"><span class="icon fa fa-info-circle" aria-hidden="true"></span><p class="important-dates-item-title">${_("Course Number")}</p><span class="important-dates-item-text course-number">${course.display_number_with_default | h}</span></li>
+          <li class="important-dates-item"><span class="icon fa fa-info-circle" aria-hidden="true"></span><p class="important-dates-item-title">${_("Course Number")}</p><span class="important-dates-item-text course-number">${course.display_number_with_default}</span></li>
           % if not course.start_date_is_still_default:
               <%
                   course_start_date = course.advertised_start or course.start
@@ -352,7 +352,7 @@ from six import string_types
     <form id="class_enroll_form" method="post" data-remote="true" action="${reverse('change_enrollment')}">
       <fieldset class="enroll_fieldset">
         <legend class="sr">${pgettext("self","Enroll")}</legend>
-        <input name="course_id" type="hidden" value="${course.id | h}">
+        <input name="course_id" type="hidden" value="${course.id}">
         <input name="enrollment_action" type="hidden" value="enroll">
       </fieldset>
       <div class="submit">
