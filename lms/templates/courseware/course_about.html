@@ -58,11 +58,11 @@ from six import string_types
     ## making the conditional around this entire JS block for sanity
     %if settings.FEATURES.get('RESTRICT_ENROLL_BY_REG_METHOD') and course.enrollment_domain:
       <%
-        perms_error = _('The currently logged-in user account does not have permission to enroll in this course. '
+        perms_error = Text(_('The currently logged-in user account does not have permission to enroll in this course. '
                         'You may need to {start_logout_tag}log out{end_tag} then try the enroll button again. '
-                        'Please visit the {start_help_tag}help page{end_tag} for a possible solution.').format(
-                          start_help_tag="<a href='{url}'>".format(url=marketing_link('FAQ')), end_tag='</a>',
-                          start_logout_tag="<a href='{url}'>".format(url=reverse('logout'))
+                        'Please visit the {start_help_tag}help page{end_tag} for a possible solution.')).format(
+                          start_help_tag=HTML("<a href='{url}'>").format(url=marketing_link('FAQ')), end_tag=HTML('</a>'),
+                          start_logout_tag=HTML("<a href='{url}'>").format(url=reverse('logout'))
                           )
       %>
     $('#class_enroll_form').on('ajax:complete', function(event, xhr) {
@@ -138,8 +138,8 @@ from six import string_types
 
         %elif in_cart:
           <span class="add-to-cart">
-            ${Text(_('This course is in your {link_start}">cart{link_end}.')).format(
-              link_start=HTML("<a href=\'{cart_link}>".format(cart_link=cart_link)),
+            ${Text(_('This course is in your {link_start}"cart{link_end}.')).format(
+              link_start=HTML("<a href='{cart_link}>").format(cart_link=cart_link),
                                   link_end=HTML('</a>'))}
           </span>
         % elif is_course_full:
@@ -294,9 +294,9 @@ from six import string_types
             ## Multiple pre-requisite courses are not supported on frontend that's why we are pulling first element
             <span class="important-dates-item-text pre-requisite"><a href="${prc_target}">${pre_requisite_courses[0]['display']}</a></span>
             <p class="tip">
-            ${_("You must successfully complete {link_start}{prc_display}{link_end} before you begin this course.").format(
-              link_start='<a href="{}">'.format(prc_target),
-              link_end='</a>',
+            ${Text(_("You must successfully complete {link_start}{prc_display}{link_end} before you begin this course.")).format(
+              link_start=HTML('<a href="{}">').format(prc_target),
+              link_end=HTML('</a>'),
               prc_display=pre_requisite_courses[0]['display'],
             )}
             </p>

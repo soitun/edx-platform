@@ -364,7 +364,9 @@ from openedx.core.lib.courses import course_image_url
         % if any_refunds:
           <span>
           ## Translators: Please keep the "<del>" and "</del>" tags around your translation of the word "this" in your translation.
-            ${_("Note: items with strikethough like <del>this</del> have been refunded.")}
+            ${Text(_("Note: items with strikethough like {start_deltag}this{end_deltag} have been refunded.")).format(
+              start_deltag=HTML('<del>'),
+              end_deltag=HTML('</del>'))}
           </span>
         % endif
         <span class="pull-right">${_("Total")}: <b> ${currency_symbol}${"{0:0.2f}".format(order.total_cost)}  ${currency.upper()}</b></span>
