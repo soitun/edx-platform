@@ -375,7 +375,7 @@ def get_email_params(course, auto_enroll, secure=True, course_key=None, display_
 
     protocol = 'https' if secure else 'http'
     course_key = course_key or text_type(course.id)
-    display_name = display_name or course.display_name_with_default_escaped
+    display_name = display_name or course.display_name_with_default
 
     stripped_site_name = configuration_helpers.get_value(
         'SITE_NAME',

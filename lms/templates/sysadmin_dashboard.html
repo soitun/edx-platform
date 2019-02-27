@@ -4,6 +4,7 @@
 <%!
 from django.urls import reverse
 from django.utils.translation import ugettext as _
+from openedx.core.djangolib.js_utils import js_escaped_string
 %>
 
 <%block name="headextra">
@@ -167,7 +168,7 @@ textarea {
 %endif
 
 %if msg:
-    <p>${msg | n}</p>
+    <p>${msg | n, decode.utf8}</p>
 %endif
 
 %if datatable:
@@ -205,8 +206,8 @@ textarea {
       <div id="plot_${plot['id']}" style="width:600px;height:300px;"></div>
       <script type="text/javascript">
           $(function () {
-              ${plot['data']}
-              $.plot($("#plot_${plot['id']}"), ${plot['cmd']}  );
+              "${plot['data'] | n, js_escaped_string}"
+              $.plot($("#plot_${plot['id'] | n, js_escaped_string}"), "${plot['cmd'] | n, js_escaped_string}");
           });
       </script>
       <br/>
