@@ -43,4 +43,9 @@ urlpatterns = [
         gradebook_views.SubsectionGradeView.as_view(),
         name='course_grade_overrides'
     ),
+    url(
+        r'^random-courses/{course_id}/$'.format(course_id=settings.COURSE_ID_PATTERN),
+        views.AViewToKill.as_view(),
+        name='course_grades_random',
+    ),
 ]

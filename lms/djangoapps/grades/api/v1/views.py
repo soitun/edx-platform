@@ -1,5 +1,6 @@
 """ API v0 views. """
 import logging
+import random
 from contextlib import contextmanager
 
 from rest_framework import status
@@ -209,3 +210,45 @@ class CourseGradingPolicy(GradeViewMixin, ListAPIView):
     def get(self, request, course_id, *args, **kwargs):  # pylint: disable=arguments-differ
         course = self._get_course(request, course_id)
         return Response(GradingPolicySerializer(course.raw_grader, many=True).data)
+
+
+def get_random_grade_percent():
+    rand = random.Random()
+    percent = rand.random()
+    return round(percent, 2)
+
+
+class AViewToKill(GradeViewMixin, PaginatedAPIView):
+    """
+    Returns random grades for a single user.
+    GET /api/grades/v1/random-courses/{course_id}/?username={username}
+    """
+    @verify_course_exists
+    def get(self, request, course_id=None):
+        username = request.GET.get('username')
+
+        course_key = get_course_key(request, course_id)
+
+        if username:
+            with self._get_user_or_raise(request, course_key) as grade_user:
+                percent = get_random_grade_percent()
+                inverse_percent = 'NaN'
+                if percent:
+                    inverse_percent = round(1.0 / percent, 2)
+                return Response([
+                    {
+                        'username': grade_user.username,
+                        'letter_grade': '?',
+                        'percent': percent,
+                        'inverse_percent': inverse_percent,
+                        'passed': percent > 0.5,
+                        'course_id': str(course_key),
+                        'email': grade_user.email,
+                    }
+                ])
+        else:
+            raise self.api_error(
+                status_code=status.HTTP_404_NOT_FOUND,
+                developer_message='The username parameter is required',
+                error_code='username_is_required',
+            )

@@ -249,3 +249,354 @@ class CourseGradesViewTest(GradeViewTestMixin, APITestCase):
         ])
 
         self.assertEqual(expected_data, resp.data)
+
+
+# class TestAViewToKill(APITestCase):
+#     """
+#     Code that we are testing:
+# -----------------------------------------------------------------------------
+# def get_random_grade_percent():
+#     rand = random.Random()
+#     percent = rand.random()
+#     return round(percent, 2)
+
+#     @verify_course_exists
+#     def get(self, request, course_id=None):
+#         username = request.GET.get('username')
+
+#         course_key = get_course_key(request, course_id)
+
+#         if username:
+#             with self._get_user_or_raise(request, course_key) as grade_user:
+#                 percent = get_random_grade_percent()
+#                 return Response([
+#                     {
+#                         'username': grade_user.username,
+#                         'letter_grade': '?',
+#                         'percent': percent,
+#                         'inverse_percent': round(100.0 / percent),
+#                         'passed': percent > 0.5,
+#                         'course_id': str(course_key),
+#                         'email': grade_user.email,
+#                     }
+#                 ])
+#         else:
+#             raise self.api_error(
+#                 status_code=status.HTTP_404_NOT_FOUND,
+#                 developer_message='The user does not exist',
+#                 error_code='user_does_not_exist',
+#             )
+# ----------------------------------------------------------------------------
+
+
+#     What are the different test cases we have?
+#     - @verify_course_exists - ok, we need a course that actually exists (in our test)
+#     - ...
+
+#     What tools do we need to write our tests?
+#     - We need a test client (which I'm telling you by inheriting from APITestCase).
+#     -
+#     """
+#     def setUp(self):
+#         pass
+
+
+##################################################################################################
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+#                                                                                                #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+#                                                                                                #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+#                                                                                                #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+#                                                                                                #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+#                                                                                                #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+#                                                                                                #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+#                                                                                                #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+#                                                                                                #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+#                                                                                                #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+# ________              /\ __    .____                  __       ___ ___                         #
+# \______ \   ____   ___)//  |_  |    |    ____   ____ |  | __  /   |   \   ___________   ____   #
+#  |    |  \ /  _ \ /    \   __\ |    |   /  _ \ /  _ \|  |/ / /    ~    \_/ __ \_  __ \_/ __ \  #
+#  |    `   (  <_> )   |  \  |   |    |__(  <_> |  <_> )    <  \    Y    /\  ___/|  | \/\  ___/  #
+# /_______  /\____/|___|  /__|   |_______ \____/ \____/|__|_ \  \___|_  /  \___  >__|    \___  > #
+#         \/            \/               \/                 \/        \/       \/            \/  #
+##################################################################################################
+
+from datetime import datetime
+
+import mock
+from pytz import UTC
+
+from lms.djangoapps.courseware.tests.factories import GlobalStaffFactory
+from openedx.core.djangoapps.content.course_overviews.tests.factories import CourseOverviewFactory
+from student.tests.factories import CourseEnrollmentFactory, UserFactory
+from xmodule.modulestore.tests.factories import CourseFactory
+from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase, TEST_DATA_SPLIT_MODULESTORE
+
+class TestAViewToKill(SharedModuleStoreTestCase, APITestCase):
+    """
+    Code that we are testing:
+-----------------------------------------------------------------------------
+def get_random_grade_percent():
+    rand = random.Random()
+    percent = rand.random()
+    return round(percent, 2)
+
+    @verify_course_exists
+    def get(self, request, course_id=None):
+        username = request.GET.get('username')
+
+        course_key = get_course_key(request, course_id)
+
+        if username:
+            with self._get_user_or_raise(request, course_key) as grade_user:
+                percent = get_random_grade_percent()
+                return Response([
+                    {
+                        'username': grade_user.username,
+                        'letter_grade': '?',
+                        'percent': percent,
+                        'inverse_percent': round(100.0 / percent),
+                        'passed': percent > 0.5,
+                        'course_id': str(course_key),
+                        'email': grade_user.email,
+                    }
+                ])
+        else:
+            raise self.api_error(
+                status_code=status.HTTP_404_NOT_FOUND,
+                developer_message='The username is required',
+                error_code='username_is_required',
+            )
+----------------------------------------------------------------------------
+
+
+    What are the different test cases we have?
+    - @verify_course_exists - ok, we need a course that actually exists (in our test)
+    - with self._get_user_or_raise(request, course_key) as grade_user: - we need a user
+    (who is also enrolled in the course)
+    - 'inverse_percent': round(100.0 / percent) - check for ZeroDivisionError
+    - the whole else clause
+    - the happy path
+
+    What tools do we need to write our tests?
+    - We need a test client (which I'm telling you by inheriting from APITestCase).
+    - a course factory
+    - a user factory
+    - a course enrollment factory
+    - mock (for patching our random function)
+    """
+    MODULESTORE = TEST_DATA_SPLIT_MODULESTORE
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestAViewToKill, cls).setUpClass()
+        cls.course = CourseFactory.create(display_name='test_course', run='2019T2')
+        _ = CourseOverviewFactory.create(id=cls.course.id)
+
+    def setUp(self):
+        super(TestAViewToKill, self).setUp()
+        self.password = 'test'
+        self.global_staff = GlobalStaffFactory.create()
+        self.student = UserFactory(password=self.password, username='student')
+        self.other_student = UserFactory(password=self.password, username='other_student')
+        date = datetime(2013, 1, 22, tzinfo=UTC)
+        CourseEnrollmentFactory.create(course_id=self.course.id, user=self.student, created=date)
+
+    def get_url(self, course_id):
+        return reverse(
+            'grades_api:v1:course_grades_random',
+            kwargs={
+                'course_id': course_id,
+            }
+        )
+
+    def test_ok_when_course_does_exist(self):
+        self.client.login(username=self.global_staff.username, password=self.password)
+        response = self.client.get(self.get_url(self.course.id) + '?username={}'.format(self.student.username))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    def test_error_when_course_does_not_exist(self):
+        self.client.login(username=self.global_staff.username, password=self.password)
+        response = self.client.get(self.get_url('course-v1:org.1+somecourse+2030T2'))
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+        self.assertTrue('course_does_not_exist' in response.content)
+
+    def test_error_when_username_does_not_exist(self):
+        self.client.login(username=self.global_staff.username, password=self.password)
+        response = self.client.get(self.get_url(self.course.id) + '?username=foo')
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+        self.assertTrue('user_does_not_exist' in response.content)
+
+    def test_error_when_user_not_enrolled(self):
+        self.client.login(username=self.global_staff.username, password=self.password)
+        response = self.client.get(self.get_url(self.course.id) + '?username={}'.format(self.other_student.username))
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+        self.assertTrue('user_not_enrolled' in response.content)
+
+    def test_error_when_username_not_provided(self):
+        self.client.login(username=self.global_staff.username, password=self.password)
+        response = self.client.get(self.get_url(self.course.id))
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+        self.assertTrue('username_is_required' in response.content)
+
+    def test_zero_division_ok(self):
+        with mock.patch(
+                'lms.djangoapps.grades.api.v1.views.get_random_grade_percent',
+                return_value=0
+        ):
+            self.client.login(username=self.global_staff.username, password=self.password)
+            response = self.client.get(self.get_url(self.course.id) + '?username={}'.format(self.student.username))
+            self.assertEqual(status.HTTP_200_OK, response.status_code)
+            expected_data = [{
+                'username': self.student.username,
+                'letter_grade': '?',
+                'percent': 0,
+                'inverse_percent': 'NaN',
+                'passed': False,
+                'course_id': str(self.course.id),
+                'email': self.student.email,
+            }]
+            self.assertEqual(expected_data, response.data)
+
+    def test_happy_path(self):
+        with mock.patch(
+                'lms.djangoapps.grades.api.v1.views.get_random_grade_percent',
+                return_value=0.5
+        ):
+            self.client.login(username=self.global_staff.username, password=self.password)
+            response = self.client.get(self.get_url(self.course.id) + '?username={}'.format(self.student.username))
+            self.assertEqual(status.HTTP_200_OK, response.status_code)
+            expected_data = [{
+                'username': self.student.username,
+                'letter_grade': '?',
+                'percent': 0.5,
+                'inverse_percent': 2.0,
+                'passed': False,
+                'course_id': str(self.course.id),
+                'email': self.student.email,
+            }]
+            self.assertEqual(expected_data, response.data)
