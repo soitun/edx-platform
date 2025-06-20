@@ -3042,6 +3042,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.sites',
 
+    'dal',
+    'dal_select2',
+
     # Tweaked version of django.contrib.staticfiles
     'openedx.core.djangoapps.staticfiles.apps.EdxPlatformStaticFilesConfig',
 
@@ -3374,7 +3377,6 @@ CSRF_COOKIE_AGE = 60 * 60 * 24 * 7 * 52
 # end users
 CSRF_COOKIE_SECURE = False
 CSRF_TRUSTED_ORIGINS = []
-CSRF_TRUSTED_ORIGINS_WITH_SCHEME = []
 
 # If setting a cross-domain cookie, it's really important to choose
 # a name for the cookie that is DIFFERENT than the cookies used
@@ -3491,6 +3493,7 @@ SUPPORT_SITE_LINK = ''
 ID_VERIFICATION_SUPPORT_LINK = ''
 PASSWORD_RESET_SUPPORT_LINK = ''
 ACTIVATION_EMAIL_SUPPORT_LINK = ''
+SEND_ACTIVATION_EMAIL_URL = ''
 LOGIN_ISSUE_SUPPORT_LINK = ''
 
 # .. setting_name: SECURITY_PAGE_URL
@@ -5407,6 +5410,15 @@ NOTIFICATION_CREATION_BATCH_SIZE = 76
 NOTIFICATIONS_DEFAULT_FROM_EMAIL = "no-reply@example.com"
 NOTIFICATION_TYPE_ICONS = {}
 DEFAULT_NOTIFICATION_ICON_URL = ""
+NOTIFICATION_DIGEST_LOGO = DEFAULT_EMAIL_LOGO_URL
+
+############## SELF PACED EMAIL ##############
+SELF_PACED_BANNER_URL = ""
+SELF_PACED_CLOUD_URL = ""
+
+############## GOAL REMINDER EMAIL ##############
+GOAL_REMINDER_BANNER_URL = ""
+GOAL_REMINDER_PROFILE_URL = ""
 
 ############## NUDGE EMAILS ###############
 # .. setting_name: DISABLED_ORGS_FOR_PROGRAM_NUDGE
