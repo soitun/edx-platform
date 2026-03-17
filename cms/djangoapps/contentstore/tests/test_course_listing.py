@@ -6,6 +6,8 @@ by reversing group name formats.
 import random
 from unittest.mock import Mock, patch
 
+import casbin
+import pkg_resources
 import ddt
 from ccx_keys.locator import CCXLocator
 from django.test import RequestFactory
@@ -47,6 +49,81 @@ USER_COURSES_COUNT = 1
 
 QUERY_COUNT_TABLE_IGNORELIST = WAFFLE_TABLES + AUTHZ_TABLES
 
+from rest_framework.test import APIClient
+from openedx_authz.api.users import assign_role_to_user_in_scope
+from openedx_authz.constants.roles import COURSE_STAFF, COURSE_EDITOR, COURSE_DATA_RESEARCHER
+from openedx_authz.engine.enforcer import AuthzEnforcer
+from openedx_authz.engine.utils import migrate_policy_between_enforcers
+
+from openedx.core import toggles as core_toggles
+
+
+class AuthzTestMixin:
+    """
+    Minimal reusable mixin for AuthZ-enabled tests.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.toggle_patcher = patch.object(
+            core_toggles.AUTHZ_COURSE_AUTHORING_FLAG,
+            "is_enabled",
+            return_value=True,
+        )
+        cls.toggle_patcher.start()
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.toggle_patcher.stop()
+        super().tearDownClass()
+
+    def setUp(self):
+        super().setUp()
+
+        self._seed_policies()
+
+        self.authorized_user = UserFactory()
+        self.unauthorized_user = UserFactory()
+
+        self.authorized_client = APIClient()
+        self.authorized_client.force_authenticate(user=self.authorized_user)
+
+        self.unauthorized_client = APIClient()
+        self.unauthorized_client.force_authenticate(user=self.unauthorized_user)
+
+    def tearDown(self):
+        super().tearDown()
+        AuthzEnforcer.get_enforcer().clear_policy()
+
+    def add_user_to_role(self, user, role, course_key):
+        """Helper method to add a user to a role for the course."""
+        assign_role_to_user_in_scope(
+            user.username,
+            role,
+            str(course_key)
+        )
+        AuthzEnforcer.get_enforcer().load_policy()
+
+    @classmethod
+    def _seed_policies(cls):
+        global_enforcer = AuthzEnforcer.get_enforcer()
+        global_enforcer.load_policy()
+
+        model_path = pkg_resources.resource_filename(
+            "openedx_authz.engine",
+            "config/model.conf",
+        )
+
+        policy_path = pkg_resources.resource_filename(
+            "openedx_authz.engine",
+            "config/authz.policy",
+        )
+
+        migrate_policy_between_enforcers(
+            source_enforcer=casbin.Enforcer(model_path, policy_path),
+            target_enforcer=global_enforcer,
+        )
 
 @ddt.ddt
 class TestCourseListing(ModuleStoreTestCase):
@@ -407,3 +484,112 @@ class TestCourseListing(ModuleStoreTestCase):
         self.assertSetEqual(
             _set_of_course_keys(courses_in_progress), _set_of_course_keys(unsucceeded_course_actions, 'course_key')
         )
+
+
+
+class TestCourseListingAuthz(AuthzTestMixin, ModuleStoreTestCase):
+    """
+    Tests course listing using the new AuthZ authorization framework.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        self.factory = RequestFactory()
+
+    def _create_course(self, course_key):
+        course = CourseFactory.create(
+            org=course_key.org,
+            number=course_key.course,
+            run=course_key.run,
+        )
+
+        return CourseOverviewFactory.create(id=course.id, org=course_key.org)
+
+    def test_course_listing_with_course_staff_authz_permission(self):
+        # Create courses and assign access to only some of them to the user.
+        # Verify that only those courses are returned in the course listing.
+        # Using COURSE_STAFF role here.
+
+        course_key_1 = CourseLocator("Org1", "Course1", "Run1")
+        course1 = self._create_course(course_key_1)
+
+        course_key_2 = CourseLocator("Org1", "Course2", "Run1")
+        course2 = self._create_course(course_key_2)
+
+        assign_role_to_user_in_scope(
+            self.authorized_user.username,
+            COURSE_STAFF.external_key,
+            str(course_key_1),
+        )
+
+        request = self.factory.get("/course")
+        request.user = self.authorized_user
+
+        courses_list, _ = get_courses_accessible_to_user(request)
+
+        courses = list(courses_list)
+
+        self.assertEqual(len(courses), 1)
+        self.assertEqual(courses[0].id, course1.id)
+        self.assertEqual(course2.id, course_key_2)
+
+    def test_course_listing_with_course_editor_authz_permission(self):
+        # Create courses and assign access to only some of them to the user.
+        # Verify that only those courses are returned in the course listing.
+        # Using COURSE_EDITOR role here.
+
+        course_key_1 = CourseLocator("Org1", "Course1", "Run1")
+        course1 = self._create_course(course_key_1)
+
+        course_key_2 = CourseLocator("Org1", "Course2", "Run1")
+        course2 = self._create_course(course_key_2)
+
+        assign_role_to_user_in_scope(
+            self.authorized_user.username,
+            COURSE_EDITOR.external_key,
+            str(course_key_1),
+        )
+
+        request = self.factory.get("/course")
+        request.user = self.authorized_user
+
+        courses_list, _ = get_courses_accessible_to_user(request)
+
+        courses = list(courses_list)
+
+        self.assertEqual(len(courses), 1)
+        self.assertEqual(courses[0].id, course1.id)
+        self.assertEqual(course2.id, course_key_2)
+
+    def test_course_listing_without_permissions(self):
+        # Create a course but do not assign access to the user.
+        # Verify that no courses are returned in the course listing.
+
+        course_key = CourseLocator("Org1", "Course1", "Run1")
+
+        self._create_course(course_key)
+
+        request = self.factory.get("/course")
+        request.user = self.unauthorized_user
+
+        courses_list, _ = get_courses_accessible_to_user(request)
+
+        self.assertEqual(len(list(courses_list)), 0)
+
+    def test_non_staff_user_cannot_access(self):
+        """
+        Create a course and assign a non-staff role to the user.
+        Verify that the course is not returned in the course listing.
+        """
+        non_staff_user = UserFactory()
+        course_key = CourseLocator("Org1", "Course1", "Run1")
+        self._create_course(course_key)
+        self.add_user_to_role(non_staff_user, COURSE_DATA_RESEARCHER.external_key, course_key)
+
+        request = self.factory.get("/course")
+        request.user = non_staff_user
+
+        courses_list, _ = get_courses_accessible_to_user(request)
+
+        self.assertEqual(len(list(courses_list)), 0)
