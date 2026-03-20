@@ -28,9 +28,12 @@ from edx_django_utils.monitoring import function_trace
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
 from opaque_keys.edx.locator import BlockUsageLocator
+from openedx_authz.api import get_scopes_for_user_and_permission
+from openedx_authz.api.data import CourseOverviewData
 from openedx_authz.constants.permissions import (
     COURSES_MANAGE_COURSE_UPDATES,
     COURSES_MANAGE_GROUP_CONFIGURATIONS,
+    COURSES_VIEW_COURSE,
     COURSES_VIEW_COURSE_UPDATES,
 )
 from organizations.api import add_organization_course, ensure_organization
@@ -67,6 +70,7 @@ from common.djangoapps.student.roles import (
 )
 from common.djangoapps.util.json_request import JsonResponse, JsonResponseBadRequest, expect_json
 from common.djangoapps.util.string_utils import _has_non_ascii_characters
+from openedx.core import toggles as core_toggles
 from openedx.core.djangoapps.authz.constants import LegacyAuthoringPermission
 from openedx.core.djangoapps.authz.decorators import user_has_course_permission
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
@@ -408,7 +412,9 @@ def get_in_process_course_actions(request):
             exclude_args={'state': CourseRerunUIStateManager.State.SUCCEEDED},
             should_display=True,
         )
-        if has_studio_read_access(request.user, course.course_key)
+        if user_has_course_permission(
+            request.user, COURSES_VIEW_COURSE.identifier, course.course_key, LegacyAuthoringPermission.READ
+        )
     ]
 
 
@@ -773,26 +779,166 @@ def course_index(request, course_key):
     return redirect(get_course_outline_url(course_key, block_to_show))
 
 
+def _has_authz_access(course_key, is_staff_user, authz_scopes):
+    """Returns True if the user has access to the course based on authz scopes, False otherwise."""
+    if is_staff_user:
+        return True
+
+    for access in authz_scopes:
+        if access.course_id == course_key:
+            return True
+
+    return False
+
+
+def _has_legacy_access(course_key, is_staff_user, legacy_accesses):
+    """Returns True if the user has access to the course based on legacy accesses, False otherwise."""
+    if is_staff_user:
+        return True
+
+    for access in legacy_accesses:
+        if access.course_id and access.course_id == course_key:
+            return True
+        elif access.org and access.course_id is None and access.org == course_key.org:
+            return True
+
+    return False
+
+
+def _apply_query_filters(request, courses):
+    """Applies all query filters to the given courses queryset.
+    This includes filtering by active/archived status, search query, ordering
+    and any special filters (e.g. CCX courses, template courses). The filters are applied in the following order:
+    1. Special filters (e.g. CCX courses, template courses)
+    2. Active/archived status
+    3. Search query
+    4. Ordering
+    """
+
+    def filter_course(course):
+        """
+        Special filters
+        """
+        # CCXs cannot be edited in Studio (aka cms) and should not be shown in this dashboard.
+        include_course = not isinstance(course.id, CCXLocator)
+
+         # TODO remove this condition when templates purged from db
+        include_course = include_course and course.location.course != 'templates'
+
+        return include_course
+
+    filtered_courses = filter(filter_course, courses)
+
+    search_query, order, active_only, archived_only = get_query_params_if_present(request)
+
+    return get_filtered_and_ordered_courses(
+        filtered_courses,
+        active_only,
+        archived_only,
+        search_query,
+        order,
+    )
+
+
+def _get_candidate_course_keys(request):
+    """Returns a list of candidate course keys that the user may have access to,
+    based on both authz scopes and legacy group-based access.
+    Also returns the authz scopes and legacy accesses for further processing."""
+    user = request.user
+
+    # Authz start --------------------------------------
+    # Recolecting all course keys from authz scopes
+    authz_scopes = get_scopes_for_user_and_permission(
+        user.username,
+        COURSES_VIEW_COURSE.identifier
+    )
+
+    authz_keys = {
+        access.course_id
+        for access in authz_scopes
+        if access.course_id is not None and isinstance(access, CourseOverviewData)
+    }
+    # Authz end -----------------------------------------
+
+    # Legacy start --------------------------------------
+    # Recolecting all course keys from django groups
+    instructor_courses = UserBasedRole(user, CourseInstructorRole.ROLE).courses_with_role()
+
+    with strict_role_checking():
+        staff_courses = UserBasedRole(user, CourseStaffRole.ROLE).courses_with_role()
+
+    group_keys = set()
+    org_accesses = set()
+    legacy_accesses = instructor_courses | staff_courses
+
+    for access in legacy_accesses:
+        if access.course_id is not None:
+            group_keys.add(access.course_id)
+        elif access.org:
+            org_accesses.add(access.org)
+        else:
+            # No course_id or org is associated with this access.
+            pass
+
+    if org_accesses:
+        # Getting courses from user global orgs
+        all_courses_give_an_org = CourseOverview.get_all_courses(orgs=list(org_accesses))
+        org_course_keys = {overview.id for overview in all_courses_give_an_org}
+        group_keys.update(org_course_keys)
+    # Legacy end ----------------------------------------
+
+    return list(authz_keys | group_keys), authz_scopes, legacy_accesses
+
+
 @function_trace('get_courses_accessible_to_user')
 def get_courses_accessible_to_user(request):
     """
-    Try to get all courses by first reversing django groups and fallback to old method if it fails
-    Note: overhead of pymongo reads will increase if getting courses from django groups fails
-
-    Arguments:
-        request: the request object
+    Hybrid approach:
+    - Single-pass decision per course (authz vs legacy)
+    - Batch DB fetch for performance
     """
-    if GlobalStaff().has_user(request.user):
-        # user has global access so no need to get courses from django groups
-        courses, in_process_course_actions = _accessible_courses_summary_iter(request)
+    user = request.user
+    is_staff_user = GlobalStaff().has_user(user) or user.is_superuser
+    authz_scopes = None
+    legacy_accesses = None
+
+    # Step 1: Determine candidate keys
+    if is_staff_user:
+        # unavoidable full scan
+        candidate_courses = CourseOverview.get_all_courses()
+        candidate_keys = [c.id for c in candidate_courses]
     else:
-        try:
-            courses, in_process_course_actions = _accessible_courses_list_from_groups(request)
-        except AccessListFallback:
-            # user have some old groups or there was some error getting courses from django groups
-            # so fallback to iterating through all courses
-            courses, in_process_course_actions = _accessible_courses_summary_iter(request)
-    return courses, in_process_course_actions
+        candidate_keys, authz_scopes, legacy_accesses = _get_candidate_course_keys(request)
+
+    if not candidate_keys:
+        return [], []
+
+    # Step 2: Single-pass decision → collect valid keys
+    valid_course_keys = set()
+
+    for course_key in candidate_keys:
+        if core_toggles.enable_authz_course_authoring(course_key):
+            if _has_authz_access(course_key, is_staff_user, authz_scopes):
+                valid_course_keys.add(course_key)
+        else:
+            if _has_legacy_access(course_key, is_staff_user, legacy_accesses):
+                valid_course_keys.add(course_key)
+
+    if not valid_course_keys:
+        return [], []
+
+    # Step 3: Batch fetch (key optimization)
+    courses = CourseOverview.get_all_courses(
+        filter_={'id__in': list(valid_course_keys)}
+    )
+
+    # Step 4: Apply filters once
+    courses = _apply_query_filters(request, courses)
+
+    # Step 5: Compute actions once
+    in_process_actions = get_in_process_course_actions(request)
+
+    return list(courses), in_process_actions
 
 
 def _process_courses_list(courses_iter, in_process_course_actions, split_archived=False):
