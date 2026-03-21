@@ -931,7 +931,7 @@ def get_courses_accessible_to_user(request):
     # Step 3: Batch fetch (key optimization)
     courses = CourseOverview.get_all_courses(
         filter_={'id__in': list(valid_course_keys)}
-    )
+    ).order_by('created')  # default ordering is by last modified date, descending
 
     # Step 4: Apply filters once
     courses = _apply_query_filters(request, courses)
