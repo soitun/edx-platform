@@ -902,17 +902,20 @@ def get_courses_accessible_to_user(request):
     is_staff_user = GlobalStaff().has_user(user) or user.is_superuser
     authz_scopes = None
     legacy_accesses = None
+    in_process_actions = []
 
     # Step 1: Determine candidate keys
     if is_staff_user:
         # unavoidable full scan
         candidate_courses = CourseOverview.get_all_courses()
         candidate_keys = [c.id for c in candidate_courses]
+        # Compute actions once for staff users since they have access to all courses
+        in_process_actions = get_in_process_course_actions(request)
     else:
         candidate_keys, authz_scopes, legacy_accesses = _get_candidate_course_keys(request)
 
     if not candidate_keys:
-        return [], []
+        return [], in_process_actions
 
     # Step 2: Single-pass decision → collect valid keys
     valid_course_keys = set()
@@ -926,7 +929,7 @@ def get_courses_accessible_to_user(request):
                 valid_course_keys.add(course_key)
 
     if not valid_course_keys:
-        return [], []
+        return [], in_process_actions
 
     # Step 3: Batch fetch (key optimization)
     courses = CourseOverview.get_all_courses(
@@ -935,9 +938,6 @@ def get_courses_accessible_to_user(request):
 
     # Step 4: Apply filters once
     courses = _apply_query_filters(request, courses)
-
-    # Step 5: Compute actions once
-    in_process_actions = get_in_process_course_actions(request)
 
     return list(courses), in_process_actions
 
