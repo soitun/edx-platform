@@ -809,10 +809,12 @@ def _apply_query_filters(request, courses):
     """Applies all query filters to the given courses queryset.
     This includes filtering by active/archived status, search query, ordering
     and any special filters (e.g. CCX courses, template courses). The filters are applied in the following order:
-    1. Special filters (e.g. CCX courses, template courses)
-    2. Active/archived status
-    3. Search query
-    4. Ordering
+    1. Active/archived status
+    2. Search query
+    3. Ordering
+    4. Special filters (e.g. CCX courses, template courses)
+    The first 3 filters are applied using queryset methods, while the last filter is applied using a Python filter
+    function since it involves checking the course type (i.e. if it's a CCX course or a template course).
     """
 
     def filter_course(course):
@@ -827,17 +829,16 @@ def _apply_query_filters(request, courses):
 
         return include_course
 
-    filtered_courses = filter(filter_course, courses)
-
     search_query, order, active_only, archived_only = get_query_params_if_present(request)
 
-    return get_filtered_and_ordered_courses(
-        filtered_courses,
+    filtered_courses = get_filtered_and_ordered_courses(
+        courses,
         active_only,
         archived_only,
         search_query,
         order,
     )
+    return filter(filter_course, filtered_courses)
 
 
 def _get_candidate_course_keys(request):

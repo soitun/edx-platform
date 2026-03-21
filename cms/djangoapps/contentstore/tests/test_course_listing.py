@@ -6,12 +6,12 @@ by reversing group name formats.
 import random
 from unittest.mock import Mock, patch
 
-import casbin
-import pkg_resources
 import ddt
 from ccx_keys.locator import CCXLocator
 from django.test import RequestFactory
 from opaque_keys.edx.locations import CourseLocator
+from openedx_authz.api.users import assign_role_to_user_in_scope
+from openedx_authz.constants.roles import COURSE_DATA_RESEARCHER, COURSE_EDITOR, COURSE_STAFF
 
 from cms.djangoapps.contentstore.tests.utils import AjaxEnabledTestClient
 from cms.djangoapps.contentstore.utils import delete_course
@@ -34,11 +34,12 @@ from common.djangoapps.student.roles import (
     UserBasedRole,
 )
 from common.djangoapps.student.tests.factories import UserFactory
-from common.djangoapps.util import course
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 from openedx.core.djangoapps.content.course_overviews.tests.factories import CourseOverviewFactory
 from openedx.core.djangoapps.waffle_utils.testutils import WAFFLE_TABLES
 from openedx.core.djangolib.testing.utils import AUTHZ_TABLES
+from openedx.core.djangoapps.authz.tests.mixins import AuthzTestMixin
+from openedx.core import toggles as core_toggles
 from xmodule.modulestore import ModuleStoreEnum  # lint-amnesty, pylint: disable=wrong-import-order
 from xmodule.modulestore.tests.django_utils import (
     ModuleStoreTestCase,  # lint-amnesty, pylint: disable=wrong-import-order
@@ -50,81 +51,6 @@ USER_COURSES_COUNT = 1
 
 QUERY_COUNT_TABLE_IGNORELIST = WAFFLE_TABLES + AUTHZ_TABLES
 
-from rest_framework.test import APIClient
-from openedx_authz.api.users import assign_role_to_user_in_scope
-from openedx_authz.constants.roles import COURSE_STAFF, COURSE_EDITOR, COURSE_DATA_RESEARCHER
-from openedx_authz.engine.enforcer import AuthzEnforcer
-from openedx_authz.engine.utils import migrate_policy_between_enforcers
-
-from openedx.core import toggles as core_toggles
-
-
-class AuthzTestMixin:
-    """
-    Minimal reusable mixin for AuthZ-enabled tests.
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        cls.toggle_patcher = patch.object(
-            core_toggles.AUTHZ_COURSE_AUTHORING_FLAG,
-            "is_enabled",
-            return_value=True,
-        )
-        cls.toggle_patcher.start()
-        super().setUpClass()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.toggle_patcher.stop()
-        super().tearDownClass()
-
-    def setUp(self):
-        super().setUp()
-
-        self._seed_policies()
-
-        self.authorized_user = UserFactory()
-        self.unauthorized_user = UserFactory()
-
-        self.authorized_client = APIClient()
-        self.authorized_client.force_authenticate(user=self.authorized_user)
-
-        self.unauthorized_client = APIClient()
-        self.unauthorized_client.force_authenticate(user=self.unauthorized_user)
-
-    def tearDown(self):
-        super().tearDown()
-        AuthzEnforcer.get_enforcer().clear_policy()
-
-    def add_user_to_role(self, user, role, course_key):
-        """Helper method to add a user to a role for the course."""
-        assign_role_to_user_in_scope(
-            user.username,
-            role,
-            str(course_key)
-        )
-        AuthzEnforcer.get_enforcer().load_policy()
-
-    @classmethod
-    def _seed_policies(cls):
-        global_enforcer = AuthzEnforcer.get_enforcer()
-        global_enforcer.load_policy()
-
-        model_path = pkg_resources.resource_filename(
-            "openedx_authz.engine",
-            "config/model.conf",
-        )
-
-        policy_path = pkg_resources.resource_filename(
-            "openedx_authz.engine",
-            "config/authz.policy",
-        )
-
-        migrate_policy_between_enforcers(
-            source_enforcer=casbin.Enforcer(model_path, policy_path),
-            target_enforcer=global_enforcer,
-        )
 
 @ddt.ddt
 class TestCourseListing(ModuleStoreTestCase):
@@ -499,6 +425,7 @@ class TestCourseListingAuthz(AuthzTestMixin, ModuleStoreTestCase):
         self.factory = RequestFactory()
 
     def _create_course(self, course_key):
+        """Helper method to create a course and its overview."""
         course = CourseFactory.create(
             org=course_key.org,
             number=course_key.course,
@@ -665,7 +592,11 @@ class TestCourseListingAuthz(AuthzTestMixin, ModuleStoreTestCase):
             # so these three courses should be returned in the course listing even if the toggle is enabled
             # for authz_enable_course_3 but no role is assigned for it.
             self.assertEqual(len(courses), 3)
-            self.assertTrue(all(course.id in [authz_enable_course_1.id, authz_enable_course_2.id, legacy_course_1.id] for course in courses))
+            self.assertTrue(
+                all(course.id in [authz_enable_course_1.id, authz_enable_course_2.id, legacy_course_1.id]
+                    for course in courses
+                )
+            )
 
             # Case 2: Staff user should have access to all courses regardless of authz permissions.
             # Pending authz_course_3 to check as staff
@@ -673,7 +604,14 @@ class TestCourseListingAuthz(AuthzTestMixin, ModuleStoreTestCase):
             courses_list, _ = get_courses_accessible_to_user(request)
             courses = list(courses_list)
             self.assertEqual(len(courses), 6)
-            self.assertTrue(all(course.id in [authz_enable_course_1.id, authz_enable_course_2.id, authz_enable_course_3.id, legacy_course_1.id, legacy_course_2.id, legacy_course_3.id] for course in courses))
+            self.assertTrue(
+                all(
+                    course.id in
+                    [authz_enable_course_1.id, authz_enable_course_2.id, authz_enable_course_3.id,
+                     legacy_course_1.id, legacy_course_2.id, legacy_course_3.id]
+                    for course in courses
+                )
+            )
 
             # Case 3: Superuser should have access to all courses regardless of authz permissions.
             superuser = UserFactory(is_superuser=True)
@@ -681,4 +619,11 @@ class TestCourseListingAuthz(AuthzTestMixin, ModuleStoreTestCase):
             courses_list, _ = get_courses_accessible_to_user(request)
             courses = list(courses_list)
             self.assertEqual(len(courses), 6)
-            self.assertTrue(all(course.id in [authz_enable_course_1.id, authz_enable_course_2.id, authz_enable_course_3.id, legacy_course_1.id, legacy_course_2.id, legacy_course_3.id] for course in courses))
+            self.assertTrue(
+                all(
+                    course.id in
+                    [authz_enable_course_1.id, authz_enable_course_2.id, authz_enable_course_3.id,
+                     legacy_course_1.id, legacy_course_2.id, legacy_course_3.id]
+                    for course in courses
+                )
+            )
