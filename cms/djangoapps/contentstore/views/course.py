@@ -842,9 +842,19 @@ def _apply_query_filters(request, courses):
 
 
 def _get_candidate_course_keys(request):
-    """Returns a list of candidate course keys that the user may have access to,
-    based on both authz scopes and legacy group-based access.
-    Also returns the authz scopes and legacy accesses for further processing."""
+    """
+    Return candidate course keys the user may have access to, combining:
+
+    - Authz scopes:
+    Collects course keys from the user's scopes for the
+    `COURSES_VIEW_COURSE` permission.
+
+    - Legacy access:
+    Collects course keys based on Django group roles
+    (`CourseInstructorRole`, `CourseStaffRole`) and org-level access.
+    If the user has org-level access, all courses within those orgs
+    are included.
+    """
     user = request.user
 
     # Authz start --------------------------------------
@@ -855,9 +865,9 @@ def _get_candidate_course_keys(request):
     )
 
     authz_keys = {
-        access.course_id
+        access.course_key
         for access in authz_scopes
-        if access.course_id is not None and isinstance(access, CourseOverviewData)
+        if isinstance(access, CourseOverviewData) and access.course_key
     }
     # Authz end -----------------------------------------
 
@@ -874,7 +884,11 @@ def _get_candidate_course_keys(request):
 
     for access in legacy_accesses:
         if access.course_id is not None:
-            group_keys.add(access.course_id)
+            course_key = access.course_id
+            if not isinstance(course_key, CourseKey):
+                # CCX courses cannot be edited in Studio and should not be shown in this dashboard.
+                course_key = CourseKey.from_string(str(course_key))
+            group_keys.add(course_key)
         elif access.org:
             org_accesses.add(access.org)
         else:
@@ -883,63 +897,75 @@ def _get_candidate_course_keys(request):
 
     if org_accesses:
         # Getting courses from user global orgs
-        all_courses_give_an_org = CourseOverview.get_all_courses(orgs=list(org_accesses))
-        org_course_keys = {overview.id for overview in all_courses_give_an_org}
-        group_keys.update(org_course_keys)
+        all_courses_give_an_org = CourseOverview.get_all_courses(orgs=org_accesses).values_list("id", flat=True)
+        group_keys.update(all_courses_give_an_org)
     # Legacy end ----------------------------------------
 
-    return list(authz_keys | group_keys), authz_scopes, legacy_accesses
+    return authz_keys | group_keys
 
 
 @function_trace('get_courses_accessible_to_user')
 def get_courses_accessible_to_user(request):
     """
-    Hybrid approach:
-    - Single-pass decision per course (authz vs legacy)
-    - Batch DB fetch for performance
+    Return courses accessible to the user using a hybrid AuthZ + legacy approach.
+
+    Flow:
+        1. Determine candidate course keys:
+           - Staff: all courses (full scan).
+           - Non-staff: derived from AuthZ scopes and legacy access.
+
+        2. Single-pass access evaluation:
+           - Use AuthZ or legacy checks per course (based on feature flags).
+           - Collect only accessible course keys.
+
+        3. Batch fetch courses:
+           - Retrieve all valid courses in one query (ordered by creation date).
+
+        4. Apply request-based filters.
+
+    Returns:
+        tuple:
+            - list[CourseOverview]: Accessible courses.
+            - list: In-process course actions (staff only).
     """
     user = request.user
     is_staff_user = GlobalStaff().has_user(user) or user.is_superuser
-    authz_scopes = None
-    legacy_accesses = None
     in_process_actions = []
 
     # Step 1: Determine candidate keys
     if is_staff_user:
-        # unavoidable full scan
-        candidate_courses = CourseOverview.get_all_courses()
-        candidate_keys = [c.id for c in candidate_courses]
+        # Unavoidable full scan
+        # however, we only fetch the course keys here for the access check,
+        # and defer fetching the full course objects until after filtering by access
+        candidate_keys = CourseOverview.get_all_courses().values_list("id", flat=True)
         # Compute actions once for staff users since they have access to all courses
         in_process_actions = get_in_process_course_actions(request)
     else:
-        candidate_keys, authz_scopes, legacy_accesses = _get_candidate_course_keys(request)
-
-    if not candidate_keys:
-        return [], in_process_actions
+        candidate_keys = _get_candidate_course_keys(request)
 
     # Step 2: Single-pass decision → collect valid keys
     valid_course_keys = set()
-
     for course_key in candidate_keys:
-        if core_toggles.enable_authz_course_authoring(course_key):
-            if _has_authz_access(course_key, is_staff_user, authz_scopes):
-                valid_course_keys.add(course_key)
-        else:
-            if _has_legacy_access(course_key, is_staff_user, legacy_accesses):
-                valid_course_keys.add(course_key)
+        if is_staff_user or user_has_course_permission(
+            user,
+            COURSES_VIEW_COURSE.identifier,
+            course_key,
+            LegacyAuthoringPermission.READ,
+        ):
+            valid_course_keys.add(course_key)
 
     if not valid_course_keys:
         return [], in_process_actions
 
-    # Step 3: Batch fetch (key optimization)
+    # Step 3: Batch fetch valid courses with a single query, ordered by creation date
     courses = CourseOverview.get_all_courses(
         filter_={'id__in': list(valid_course_keys)}
-    ).order_by('created')  # default ordering is by last modified date, descending
+    ).order_by('created')  # default ordering is by created date
 
-    # Step 4: Apply filters once
+    # Step 4: Apply filters (e.g. search, active/archived status, ordering)
     courses = _apply_query_filters(request, courses)
 
-    return list(courses), in_process_actions
+    return courses, in_process_actions
 
 
 def _process_courses_list(courses_iter, in_process_course_actions, split_archived=False):
