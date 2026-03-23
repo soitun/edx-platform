@@ -75,7 +75,7 @@ For a more detailed comparison of content integration options, see `Options for 
 .. _Options for Extending the edX Platform: https://docs.openedx.org/en/latest/developers/references/developer_guide/extending_platform/extending.html
 .. _custom JavaScript application: https://docs.openedx.org/en/latest/educators/references/course_development/exercise_tools/custom_javascript.html
 .. _external grader documentation: https://docs.openedx.org/en/latest/educators/concepts/exercise_tools/about_external_graders.html
-.. _You can follow this guide to install and enable custom TinyMCE plugins: ../extensions/tinymce_plugins.rst
+.. _You can follow this guide to install and enable custom TinyMCE plugins: ../extensions/tinymce_plugins.html
 
 
 
