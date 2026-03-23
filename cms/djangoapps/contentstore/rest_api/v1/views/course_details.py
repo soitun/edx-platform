@@ -7,8 +7,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from common.djangoapps.student.auth import has_studio_read_access
 from common.djangoapps.util.json_request import JsonResponseBadRequest
+from openedx_authz.constants.permissions import COURSES_VIEW_SCHEDULE_AND_DETAILS
+from openedx.core.djangoapps.authz.decorators import user_has_course_permission
+from openedx.core.djangoapps.authz.constants import LegacyAuthoringPermission
 from openedx.core.djangoapps.models.course_details import CourseDetails
 from openedx.core.lib.api.view_utils import DeveloperErrorViewMixin, verify_course_exists, view_auth_classes
 from xmodule.modulestore.django import modulestore
@@ -99,7 +101,12 @@ class CourseDetailsView(DeveloperErrorViewMixin, APIView):
         ```
         """
         course_key = CourseKey.from_string(course_id)
-        if not has_studio_read_access(request.user, course_key):
+        if not user_has_course_permission(
+            request.user,
+            COURSES_VIEW_SCHEDULE_AND_DETAILS.identifier,
+            course_key,
+            LegacyAuthoringPermission.READ
+        ):
             self.permission_denied(request)
 
         course_details = CourseDetails.fetch(course_key)
@@ -142,7 +149,12 @@ class CourseDetailsView(DeveloperErrorViewMixin, APIView):
         along with all the course's details similar to a ``GET`` request.
         """
         course_key = CourseKey.from_string(course_id)
-        if not has_studio_read_access(request.user, course_key):
+        if not user_has_course_permission(
+            request.user,
+            COURSES_VIEW_SCHEDULE_AND_DETAILS.identifier,
+            course_key,
+            LegacyAuthoringPermission.READ
+        ):
             self.permission_denied(request)
 
         course_block = modulestore().get_course(course_key)

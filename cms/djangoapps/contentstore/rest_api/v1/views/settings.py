@@ -7,8 +7,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from common.djangoapps.student.auth import has_studio_read_access
+from openedx_authz.constants.permissions import COURSES_VIEW_SCHEDULE_AND_DETAILS
+
 from lms.djangoapps.certificates.api import can_show_certificate_available_date_field
+from openedx.core.djangoapps.authz.decorators import user_has_course_permission
+from openedx.core.djangoapps.authz.constants import LegacyAuthoringPermission
 from openedx.core.lib.api.view_utils import DeveloperErrorViewMixin, verify_course_exists, view_auth_classes
 from xmodule.modulestore.django import modulestore
 
@@ -99,7 +102,12 @@ class CourseSettingsView(DeveloperErrorViewMixin, APIView):
         ```
         """
         course_key = CourseKey.from_string(course_id)
-        if not has_studio_read_access(request.user, course_key):
+        if not user_has_course_permission(
+            request.user,
+            COURSES_VIEW_SCHEDULE_AND_DETAILS.identifier,
+            course_key,
+            LegacyAuthoringPermission.READ
+        ):
             self.permission_denied(request)
 
         with modulestore().bulk_operations(course_key):
