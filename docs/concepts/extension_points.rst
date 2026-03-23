@@ -180,9 +180,7 @@ Design Tokens (Theming)
 
 *Status: Adopt, Stable*
 
-Design tokens are all the values needed to build and maintain a design system — spacing, color, typography, object styles, etc. They can represent anything defined by the design: color as an RGB value, opacity as a number, spacing as a REM value. They are used instead of hard-coded values to provide flexibility and uniformity across the application.
-
-See the `Design Tokens concept page <https://docs.openedx.org/en/latest/developers/concepts/design_tokens.html#design-tokens>`_ for more detail.
+Open edX frontend applications are built using the `Paragon design system <https://paragon-openedx.netlify.app/>`_, which supports runtime theming. Paragon uses design tokens (`see the Design Tokens concept page <https://docs.openedx.org/en/latest/developers/concepts/design_tokens.html#design-token>`_) to define its built-in styles, compiling them into CSS custom properties (variables) for visual properties like colors, spacing, and typography. A theme can override those defaults by compiling its own design tokens into a stylesheet that sets new values for those variables. A theme can also include custom SCSS that compiles into additional CSS, allowing for additional customization past the scope of the defined tokens. These themes can be loaded at runtime, meaning this customization can be done without rebuilding any frontend applications
 
 
 Custom MFEs
