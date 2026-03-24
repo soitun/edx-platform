@@ -13,7 +13,7 @@ from openedx_authz.constants.roles import COURSE_EDITOR
 from cms.djangoapps.contentstore.tests.utils import CourseTestCase
 from cms.djangoapps.contentstore.utils import get_proctored_exam_settings_url
 from common.djangoapps.util.course import get_link_for_about_page
-from openedx.core.djangoapps.authz.tests.mixins import AuthzTestMixin
+from openedx.core.djangoapps.authz.tests.mixins import CourseAuthoringAuthzTestMixin
 from openedx.core.djangoapps.credit.tests.factories import CreditCourseFactory
 
 from ...mixins import PermissionAccessMixin
@@ -91,7 +91,7 @@ class CourseSettingsViewTest(CourseTestCase, PermissionAccessMixin):
 
 
 @ddt.ddt
-class CourseSettingsAuthzViewTest(AuthzTestMixin, CourseTestCase):
+class CourseSettingsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
     """
     Tests for CourseSettingsView using AuthZ permissions.
     """

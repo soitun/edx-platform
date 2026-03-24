@@ -12,7 +12,7 @@ from rest_framework.test import APIClient
 from openedx_authz.constants.roles import COURSE_EDITOR
 
 from cms.djangoapps.contentstore.tests.utils import CourseTestCase
-from openedx.core.djangoapps.authz.tests.mixins import AuthzTestMixin
+from openedx.core.djangoapps.authz.tests.mixins import CourseAuthoringAuthzTestMixin
 
 from ...mixins import PermissionAccessMixin
 
@@ -118,7 +118,7 @@ class CourseDetailsViewTest(CourseTestCase, PermissionAccessMixin):
 
 
 @ddt.ddt
-class CourseDetailsAuthzViewTest(AuthzTestMixin, CourseTestCase):
+class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
     """
     Tests for CourseDetailsView using AuthZ permissions.
     """
