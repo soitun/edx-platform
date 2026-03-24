@@ -105,7 +105,7 @@ class CourseSettingsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase)
 
     def test_authorized_user_can_access_course_settings(self):
         """Authorized user with COURSE_EDITOR role can access course settings."""
-        self.add_user_to_role(self.authorized_user, COURSE_EDITOR.external_key, self.course.id)
+        self.add_user_to_role_in_course(self.authorized_user, COURSE_EDITOR.external_key, self.course.id)
         response = self.authorized_client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -126,7 +126,7 @@ class CourseSettingsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         # Assign role dynamically
-        self.add_user_to_role(
+        self.add_user_to_role_in_course(
             self.unauthorized_user,
             COURSE_EDITOR.external_key,
             self.course.id
@@ -142,7 +142,7 @@ class CourseSettingsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase)
         """
         _ = CreditCourseFactory(course_key=self.course.id, enabled=True)
 
-        self.add_user_to_role(self.authorized_user, COURSE_EDITOR.external_key, self.course.id)
+        self.add_user_to_role_in_course(self.authorized_user, COURSE_EDITOR.external_key, self.course.id)
         response = self.authorized_client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)

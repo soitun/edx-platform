@@ -197,7 +197,7 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
         """
         Authorized user with COURSE_EDITOR role can access course details.
         """
-        self.add_user_to_role(
+        self.add_user_to_role_in_course(
             self.authorized_user,
             COURSE_EDITOR.external_key,
             self.course.id
@@ -231,7 +231,7 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
         """
         Authorized user with COURSE_EDITOR role can update course details.
         """
-        self.add_user_to_role(
+        self.add_user_to_role_in_course(
             self.authorized_user,
             COURSE_EDITOR.external_key,
             self.course.id
@@ -258,7 +258,7 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         # Assign role dynamically
-        self.add_user_to_role(
+        self.add_user_to_role_in_course(
             self.unauthorized_user,
             COURSE_EDITOR.external_key,
             self.course.id
@@ -276,7 +276,7 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
         """
         Ensure validation still applies under AuthZ.
         """
-        self.add_user_to_role(
+        self.add_user_to_role_in_course(
             self.authorized_user,
             COURSE_EDITOR.external_key,
             self.course.id
