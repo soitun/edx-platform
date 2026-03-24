@@ -38,7 +38,7 @@ from openedx.core.djangoapps.content.course_overviews.models import CourseOvervi
 from openedx.core.djangoapps.content.course_overviews.tests.factories import CourseOverviewFactory
 from openedx.core.djangoapps.waffle_utils.testutils import WAFFLE_TABLES
 from openedx.core.djangolib.testing.utils import AUTHZ_TABLES
-from openedx.core.djangoapps.authz.tests.mixins import AuthzTestMixin
+from openedx.core.djangoapps.authz.tests.mixins import CourseAuthoringAuthzTestMixin
 from openedx.core import toggles as core_toggles
 from xmodule.modulestore import ModuleStoreEnum  # lint-amnesty, pylint: disable=wrong-import-order
 from xmodule.modulestore.tests.django_utils import (
@@ -414,7 +414,7 @@ class TestCourseListing(ModuleStoreTestCase):
 
 
 @ddt.ddt
-class TestCourseListingAuthz(AuthzTestMixin, ModuleStoreTestCase):
+class TestCourseListingAuthz(CourseAuthoringAuthzTestMixin, ModuleStoreTestCase):
     """
     Tests course listing using the new AuthZ authorization framework.
     """
@@ -513,7 +513,7 @@ class TestCourseListingAuthz(AuthzTestMixin, ModuleStoreTestCase):
         non_staff_user = UserFactory()
         course_key = CourseLocator("Org1", "Course1", "Run1")
         self._create_course(course_key)
-        self.add_user_to_role(non_staff_user, COURSE_DATA_RESEARCHER.external_key, course_key)
+        self.add_user_to_role_in_course(non_staff_user, COURSE_DATA_RESEARCHER.external_key, course_key)
 
         request = self.factory.get("/course")
         request.user = non_staff_user
