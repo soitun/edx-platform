@@ -9,7 +9,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from openedx_authz.constants.roles import COURSE_EDITOR
+from openedx_authz.constants.roles import COURSE_EDITOR, COURSE_STAFF
 
 from cms.djangoapps.contentstore.tests.utils import CourseTestCase
 from openedx.core.djangoapps.authz.tests.mixins import CourseAuthoringAuthzTestMixin
@@ -227,9 +227,71 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
         response = self.super_client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_put_authorized_user_can_update_course(self):
+    def test_put_authorized_user_can_edit_course_details(self):
         """
         Authorized user with COURSE_EDITOR role can update course details.
+        COURSE_EDITOR does not have permission to edit schedule fields.
+        """
+
+        self.add_user_to_role_in_course(
+            self.authorized_user,
+            COURSE_EDITOR.external_key,
+            self.course.id
+        )
+
+        # Get the current status of the course details to use
+        # as the basis for the update request
+        response = self.authorized_client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        current_course_details = response.json()
+
+        # Update the course details with new values,
+        # keeping schedule fields the same to ensure we are only
+        # testing edit details permission
+        current_course_details["title"] = "Updated Title"
+
+        response = self.authorized_client.put(
+            path=self.url,
+            data=json.dumps(current_course_details),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_put_authorized_user_can_edit_course_schedule(self):
+        """
+        Authorized user with COURSE_STAFF role can update course schedule.
+        Only COURSE_STAFF and COURSE_ADMIN can edit schedule related fields.
+        """
+        self.add_user_to_role_in_course(
+            self.authorized_user,
+            COURSE_STAFF.external_key,
+            self.course.id
+        )
+
+        # Get the current status of the course details to use
+        # as the basis for the update request
+        response = self.authorized_client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        current_course_details = response.json()
+
+        # Update the course details with new values,
+        # changing schedule fields to ensure we are only
+        # testing edit schedule permission
+        current_course_details["end_date"] = "2023-08-01T01:30:00Z"
+
+        response = self.authorized_client.put(
+            path=self.url,
+            data=json.dumps(current_course_details),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_put_unauthorized_user_can_edit_course_schedule(self):
+        """
+        Unauthorized user with COURSE_EDITOR role cannot update course schedule.
+        Only COURSE_STAFF and COURSE_ADMIN can edit schedule related fields.
         """
         self.add_user_to_role_in_course(
             self.authorized_user,
@@ -237,13 +299,24 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
             self.course.id
         )
 
+        # Get the current status of the course details to use
+        # as the basis for the update request
+        response = self.authorized_client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        current_course_details = response.json()
+
+        # Update the course details with new values,
+        # changing schedule fields to ensure we are only
+        # testing edit schedule permission
+        current_course_details["end_date"] = "2023-08-01T01:30:00Z"
+
         response = self.authorized_client.put(
             path=self.url,
-            data=json.dumps(self.request_data),
+            data=json.dumps(current_course_details),
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_put_user_without_role_then_added_can_update(self):
         """
@@ -260,7 +333,7 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
         # Assign role dynamically
         self.add_user_to_role_in_course(
             self.unauthorized_user,
-            COURSE_EDITOR.external_key,
+            COURSE_STAFF.external_key,
             self.course.id
         )
 
