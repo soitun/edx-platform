@@ -151,14 +151,23 @@ class CourseDetailsView(DeveloperErrorViewMixin, APIView):
         along with all the course's details similar to a ``GET`` request.
         """
         course_key = CourseKey.from_string(course_id)
+        is_schedule_update, is_details_update = self.classify_update(request, course_key)
 
-        authz_permission = COURSES_EDIT_DETAILS.identifier
-        if self.is_schedule_update(request, course_key):
-            authz_permission = COURSES_EDIT_SCHEDULE.identifier
-        print(f"Determined authz_permission {authz_permission} for update request.")  # Debug print statement
-        if not user_has_course_permission(
+        if not is_schedule_update and not is_details_update:
+            # No updatable fields provided in the request
+            raise ValidationError("No updatable fields provided in the request.")
+
+        if is_schedule_update and not user_has_course_permission(
             request.user,
-            authz_permission,
+            COURSES_EDIT_SCHEDULE.identifier,
+            course_key,
+            LegacyAuthoringPermission.READ
+        ):
+            self.permission_denied(request)
+
+        if is_details_update and not user_has_course_permission(
+            request.user,
+            COURSES_EDIT_DETAILS.identifier,
             course_key,
             LegacyAuthoringPermission.READ
         ):
@@ -174,21 +183,52 @@ class CourseDetailsView(DeveloperErrorViewMixin, APIView):
         serializer = CourseDetailsSerializer(updated_data)
         return Response(serializer.data)
 
-    def is_schedule_update(self, request: Request, course_key: str) -> bool:
+    def classify_update(self, request: Request, course_key: str) -> tuple[bool, bool]:
         """
-        Helper method to determine if the update is only for schedule related fields.
+        Determine whether the payload is updating schedule fields, detail fields, or both.
+
+        Returns:
+            (is_schedule_update, is_details_update)
         """
         payload = request.data
-        schedule_fields = {"start_date": None, "end_date": None, "enrollment_start": None, "enrollment_end": None}
+        schedule_fields = {"start_date", "end_date", "enrollment_start", "enrollment_end"}
+
         course_details = CourseDetails.fetch(course_key)
-        for field in schedule_fields:
-            payload_value = payload.get(field)
-            if payload_value is not None:
-                try:
-                    # Attempt to parse the date to ensure it's a valid date format
-                    payload_value = CourseDetailsSerializer().fields[field].to_internal_value(payload_value)
-                except ValidationError as exc:
-                    raise ValidationError(f"Invalid date format for field {field}: {payload_value}") from exc
-            if payload_value and getattr(course_details, field) != payload_value:
-                return True
-        return set(payload.keys()).issubset(schedule_fields)
+
+        is_schedule_update = False
+        is_details_update = False
+
+        serializer = CourseDetailsSerializer()
+
+        for field, payload_value in payload.items():
+            # Ignore unknown fields if needed
+            if field not in serializer.fields:
+                continue
+
+            # Normalize/validate schedule fields
+            if field in schedule_fields:
+                if payload_value is not None and not is_schedule_update:
+                    # if is_schedule_update is already True,
+                    # we have already validated it,
+                    # so we can skip re-validating
+                    try:
+                        payload_value = serializer.fields[field].to_internal_value(payload_value)
+                    except ValidationError as exc:
+                        raise ValidationError(
+                            f"Invalid date format for field {field}: {payload_value}"
+                        ) from exc
+
+                if payload_value and getattr(course_details, field) != payload_value:
+                    is_schedule_update = True
+
+            else:
+                # Any non-schedule field counts as details update
+                current_value = getattr(course_details, field, None)
+                if payload_value != current_value:
+                    is_details_update = True
+
+            # Early exit for efficiency
+            if is_schedule_update and is_details_update:
+                break
+
+        return is_schedule_update, is_details_update

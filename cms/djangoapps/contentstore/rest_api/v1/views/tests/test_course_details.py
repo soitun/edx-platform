@@ -45,7 +45,13 @@ class CourseDetailsViewTest(CourseTestCase, PermissionAccessMixin):
         Test that an error is returned if the user is unauthorised.
         """
         client, _ = self.create_non_staff_authed_user_client()
-        response = client.put(self.url)
+        pre_requisite_course_keys = [str(self.course.id), "invalid_key"]
+        request_data = {"pre_requisite_courses": pre_requisite_course_keys}
+        response = client.put(
+            path=self.url,
+            data=json.dumps(request_data),
+            content_type="application/json",
+        )
         error = self.get_and_check_developer_response(response)
         self.assertEqual(error, "You do not have permission to perform this action.")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -189,7 +195,11 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
         """
         Test that an error is returned if the user is unauthorised.
         """
-        response = self.unauthorized_client.put(self.url)
+        response = self.unauthorized_client.put(
+            path=self.url,
+            data=json.dumps(self.request_data),
+            content_type="application/json",
+        )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -317,6 +327,68 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_put_authorized_user_can_edit_course_schedule_and_details(self):
+            """
+            Authorized user with COURSE_STAFF role can update course
+            schedule and details.
+            """
+            self.add_user_to_role_in_course(
+                self.authorized_user,
+                COURSE_STAFF.external_key,
+                self.course.id
+            )
+
+            # Get the current status of the course details to use
+            # as the basis for the update request
+            response = self.authorized_client.get(self.url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            current_course_details = response.json()
+
+            # Update the course details with new values,
+            # changing schedule and details fields to ensure user
+            # has permission to edit both
+            current_course_details["end_date"] = "2023-08-01T01:30:00Z"
+            current_course_details["title"] = "Updated Title"
+
+            response = self.authorized_client.put(
+                path=self.url,
+                data=json.dumps(current_course_details),
+                content_type="application/json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_put_unauthorized_user_can_edit_course_schedule_and_details(self):
+            """
+            Unauthorized user with COURSE_EDITOR role cannot update course
+            schedule and details.
+            """
+            self.add_user_to_role_in_course(
+                self.authorized_user,
+                COURSE_EDITOR.external_key,
+                self.course.id
+            )
+
+            # Get the current status of the course details to use
+            # as the basis for the update request
+            response = self.authorized_client.get(self.url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            current_course_details = response.json()
+
+            # Update the course details with new values,
+            # changing schedule and details fields to ensure user
+            # has permission to edit both
+            current_course_details["end_date"] = "2023-08-01T01:30:00Z"
+            current_course_details["title"] = "Updated Title"
+
+            response = self.authorized_client.put(
+                path=self.url,
+                data=json.dumps(current_course_details),
+                content_type="application/json",
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_put_user_without_role_then_added_can_update(self):
         """
