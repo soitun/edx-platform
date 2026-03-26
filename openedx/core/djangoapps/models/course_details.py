@@ -201,8 +201,8 @@ class CourseDetails:
         only one ``course_published`` signal is emitted per call, regardless of how
         many individual fields were updated.  Without this, every ``update_item`` /
         ``delete_item`` call inside ``update_about_item`` (and the top-level block
-        update) each fire their own signal, causing downstream tasks (e.g. git
-        auto-export) to run multiple times for a single user action.
+        update) each fire their own signal, causing downstream tasks to run
+        multiple times for a single user action.
         """
         module_store = modulestore()
 
