@@ -518,6 +518,7 @@ MAKO_TEMPLATE_DIRS_BASE = [
 # Since the CMS uses the LMS's list of mako template directories for the "preview"
 # template engine, we define the list here
 lms_mako_template_dirs_base = list(MAKO_TEMPLATE_DIRS_BASE)
+lms_mako_template_dirs_base.append(REPO_ROOT / 'lms' / 'djangoapps' / 'teams' / 'templates')
 lms_mako_template_dirs_base.append(OPENEDX_ROOT / 'features' / 'course_experience' / 'templates')
 
 CONTEXT_PROCESSORS = [
