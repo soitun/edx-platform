@@ -778,34 +778,7 @@ def course_index(request, course_key):
     block_to_show = request.GET.get("show")
     return redirect(get_course_outline_url(course_key, block_to_show))
 
-
-def _has_authz_access(course_key, is_staff_user, authz_scopes):
-    """Returns True if the user has access to the course based on authz scopes, False otherwise."""
-    if is_staff_user:
-        return True
-
-    for access in authz_scopes:
-        if access.course_id == course_key:
-            return True
-
-    return False
-
-
-def _has_legacy_access(course_key, is_staff_user, legacy_accesses):
-    """Returns True if the user has access to the course based on legacy accesses, False otherwise."""
-    if is_staff_user:
-        return True
-
-    for access in legacy_accesses:
-        if access.course_id and access.course_id == course_key:
-            return True
-        elif access.org and access.course_id is None and access.org == course_key.org:
-            return True
-
-    return False
-
-
-def _apply_query_filters(request, courses):
+def _apply_course_query_filters(request, courses):
     """Applies all query filters to the given courses queryset.
     This includes filtering by active/archived status, search query, ordering
     and any special filters (e.g. CCX courses, template courses). The filters are applied in the following order:
@@ -841,24 +814,12 @@ def _apply_query_filters(request, courses):
     return filter(filter_course, filtered_courses)
 
 
-def _get_candidate_course_keys(request):
+def _get_authz_accessible_courses_list(request):
     """
-    Return candidate course keys the user may have access to, combining:
-
-    - Authz scopes:
-    Collects course keys from the user's scopes for the
-    `COURSES_VIEW_COURSE` permission.
-
-    - Legacy access:
-    Collects course keys based on Django group roles
-    (`CourseInstructorRole`, `CourseStaffRole`) and org-level access.
-    If the user has org-level access, all courses within those orgs
-    are included.
+    List all courses available to the logged in user by
+    evaluating Authz scopes for course access.
     """
     user = request.user
-
-    # Authz start --------------------------------------
-    # Recolecting all course keys from authz scopes
     authz_scopes = get_scopes_for_user_and_permission(
         user.username,
         COURSES_VIEW_COURSE.identifier
@@ -869,10 +830,14 @@ def _get_candidate_course_keys(request):
         for access in authz_scopes
         if isinstance(access, CourseOverviewData) and access.course_key
     }
-    # Authz end -----------------------------------------
+    return authz_keys
 
-    # Legacy start --------------------------------------
-    # Recolecting all course keys from django groups
+def _get_legacy_accessible_courses_list(request):
+    """
+    List all courses available to the logged in user by
+    evaluating legacy Django group roles and organization-level access.
+    """
+    user = request.user
     instructor_courses = UserBasedRole(user, CourseInstructorRole.ROLE).courses_with_role()
 
     with strict_role_checking():
@@ -899,10 +864,40 @@ def _get_candidate_course_keys(request):
         # Getting courses from user global orgs
         all_courses_give_an_org = CourseOverview.get_all_courses(orgs=org_accesses).values_list("id", flat=True)
         group_keys.update(all_courses_give_an_org)
-    # Legacy end ----------------------------------------
+    return group_keys
+
+def _get_candidate_course_keys(request):
+    """
+    Resolve accessible course keys by merging Authz scope evaluation with
+    legacy permission checks.
+
+    Why merge Authz and legacy checks?
+    At the time of implementation, the system is in a transition phase where
+    both Authz scopes and legacy permission checks are required to determine
+    course access. Combining both approaches allows us to leverage the
+    efficiency of Authz scopes while still capturing access granted through
+    legacy mechanisms.
+
+    This produces a comprehensive and performant set of candidate course keys,
+    combining:
+
+    - Authz scopes:
+      Collects course keys from the user's scopes for the
+      `COURSES_VIEW_COURSE` permission.
+
+    - Legacy access:
+      Collects course keys based on Django group roles
+      (`CourseInstructorRole`, `CourseStaffRole`) and
+      organization-level access. If the user has organization-level access,
+      all courses within those organizations are included.
+    """
+    # Recolecting all course keys from authz scopes
+    authz_keys = _get_authz_accessible_courses_list(request)
+
+    # Recolecting all course keys from django groups and org access
+    group_keys = _get_legacy_accessible_courses_list(request)
 
     return authz_keys | group_keys
-
 
 @function_trace('get_courses_accessible_to_user')
 def get_courses_accessible_to_user(request):
@@ -941,6 +936,11 @@ def get_courses_accessible_to_user(request):
         # Compute actions once for staff users since they have access to all courses
         in_process_actions = get_in_process_course_actions(request)
     else:
+        # For non-staff users, we can get a more targeted list of candidate course keys
+        # by combining AuthZ scopes and legacy access.
+        # Why? Because non-staff users typically have access to a smaller subset of courses,
+        # so this can significantly reduce the number of courses we need to check for access
+        # in the next step.
         candidate_keys = _get_candidate_course_keys(request)
 
     # Step 2: Single-pass decision → collect valid keys
@@ -963,7 +963,7 @@ def get_courses_accessible_to_user(request):
     ).order_by('created')  # default ordering is by created date
 
     # Step 4: Apply filters (e.g. search, active/archived status, ordering)
-    courses = _apply_query_filters(request, courses)
+    courses = _apply_course_query_filters(request, courses)
 
     return courses, in_process_actions
 
