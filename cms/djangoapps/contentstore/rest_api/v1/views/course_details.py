@@ -151,7 +151,7 @@ class CourseDetailsView(DeveloperErrorViewMixin, APIView):
         along with all the course's details similar to a ``GET`` request.
         """
         course_key = CourseKey.from_string(course_id)
-        is_schedule_update, is_details_update = self.classify_update(request, course_key)
+        is_schedule_update, is_details_update = self._classify_update(request, course_key)
 
         if not is_schedule_update and not is_details_update:
             # No updatable fields provided in the request
@@ -183,7 +183,7 @@ class CourseDetailsView(DeveloperErrorViewMixin, APIView):
         serializer = CourseDetailsSerializer(updated_data)
         return Response(serializer.data)
 
-    def classify_update(self, request: Request, course_key: str) -> tuple[bool, bool]:
+    def _classify_update(self, request: Request, course_key: str) -> tuple[bool, bool]:
         """
         Determine whether the payload is updating schedule fields, detail fields, or both.
 
