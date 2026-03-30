@@ -829,6 +829,7 @@ def _get_authz_accessible_courses_list(request):
         access.course_key
         for access in authz_scopes
         if isinstance(access, CourseOverviewData) and access.course_key
+        and core_toggles.enable_authz_course_authoring(access.course_key)
     }
     return authz_keys
 
@@ -944,15 +945,7 @@ def get_courses_accessible_to_user(request):
         candidate_keys = _get_candidate_course_keys(request)
 
     # Step 2: Single-pass decision → collect valid keys
-    valid_course_keys = set()
-    for course_key in candidate_keys:
-        if is_staff_user or user_has_course_permission(
-            user,
-            COURSES_VIEW_COURSE.identifier,
-            course_key,
-            LegacyAuthoringPermission.READ,
-        ):
-            valid_course_keys.add(course_key)
+    valid_course_keys = set(candidate_keys)
 
     if not valid_course_keys:
         return [], in_process_actions
