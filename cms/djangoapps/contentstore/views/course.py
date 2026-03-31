@@ -797,7 +797,7 @@ def _apply_course_query_filters(request, courses):
         # CCXs cannot be edited in Studio (aka cms) and should not be shown in this dashboard.
         include_course = not isinstance(course.id, CCXLocator)
 
-         # TODO remove this condition when templates purged from db
+        # TODO remove this condition when templates purged from db
         include_course = include_course and course.location.course != 'templates'
 
         return include_course
@@ -859,7 +859,7 @@ def _get_legacy_accessible_courses_list(request):
             org_accesses.add(access.org)
         else:
             # No course_id or org is associated with this access.
-            pass
+            raise AccessListFallback
 
     if org_accesses:
         # Getting courses from user global orgs
@@ -892,10 +892,10 @@ def _get_candidate_course_keys(request):
       organization-level access. If the user has organization-level access,
       all courses within those organizations are included.
     """
-    # Recolecting all course keys from authz scopes
+    # Collecting all course keys from authz scopes
     authz_keys = _get_authz_accessible_courses_list(request)
 
-    # Recolecting all course keys from django groups and org access
+    # Collecting all course keys from django groups and org access
     group_keys = _get_legacy_accessible_courses_list(request)
 
     return authz_keys | group_keys
@@ -942,7 +942,14 @@ def get_courses_accessible_to_user(request):
         # Why? Because non-staff users typically have access to a smaller subset of courses,
         # so this can significantly reduce the number of courses we need to check for access
         # in the next step.
-        candidate_keys = _get_candidate_course_keys(request)
+        try:
+            candidate_keys = _get_candidate_course_keys(request)
+        except AccessListFallback:
+            # This exception is raised when we cannot determine candidate course keys from legacy access.
+            # User have some old groups or there was some error getting courses from django groups
+            # so fallback to iterating through all courses
+            candidate_keys = CourseOverview.get_all_courses().values_list("id", flat=True)
+            in_process_actions = get_in_process_course_actions(request)
 
     # Step 2: Single-pass decision → collect valid keys
     valid_course_keys = set(candidate_keys)
