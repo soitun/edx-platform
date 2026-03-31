@@ -8,10 +8,10 @@ import ddt
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
-
 from openedx_authz.constants.roles import COURSE_EDITOR, COURSE_STAFF
 
 from cms.djangoapps.contentstore.tests.utils import CourseTestCase
+from cms.djangoapps.contentstore.rest_api.v1.views.course_details import _classify_update
 from openedx.core.djangoapps.authz.tests.mixins import CourseAuthoringAuthzTestMixin
 
 from ...mixins import PermissionAccessMixin
@@ -237,9 +237,66 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
         response = self.super_client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_put_authorized_user_can_edit_course_details(self):
+    @ddt.data(
+        # No changes
+        ({}, (False, False)),
+        (
+            {"certificates_display_behavior": "end"},  # same value as existing course detail
+            (False, False),
+        ),
+
+        # Schedule-only fields
+        ({"start_date": "2023-01-01"}, (True, False)),
+        ({"end_date": "2023-02-01"}, (True, False)),
+        ({"enrollment_start": "2023-01-01"}, (True, False)),
+        ({"enrollment_end": "2023-01-10"}, (True, False)),
+
+        # Details-only fields
+        ({"title": "New Title"}, (False, True)),
+        ({"description": "New description"}, (False, True)),
+        ({"short_description": "Short"}, (False, True)),
+        ({"overview": "<p>HTML</p>"}, (False, True)),
+
+        # Mixed fields
+        (
+            {"title": "New Title", "start_date": "2023-01-01"},
+            (True, True)
+        ),
+
+        # Non-updatable / irrelevant fields
+        ({"random_field": "value"}, (False, False)),
+    )
+    @ddt.unpack
+    def test_classify_update(self, payload, expected):
+        result = _classify_update(payload, self.course.id)
+        self.assertEqual(result, expected)
+
+    def test_classyfy_update_with_get_request(self):
         """
-        Authorized user with COURSE_EDITOR role can update course details.
+        GET request with no changes should not be classified as schedule or details update.
+        """
+        # Get the current status of the course details to use
+        # as the basis for the update request
+        self.add_user_to_role_in_course(
+            self.authorized_user,
+            COURSE_EDITOR.external_key,
+            self.course.id
+        )
+        response = self.authorized_client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        current_course_details = response.json()
+        # This field is flagged as a details update because of a type mismatch:
+        # the GET response returns an invalid string, while the stored value has a different type.
+        # As a result, the equality check fails even though the values are logically the same.
+        current_course_details["certificates_display_behavior"] = "end"
+
+        expected = (False, False)
+        result = _classify_update(current_course_details, self.course.id)
+        self.assertEqual(result, expected)
+
+    def test_course_editor_can_edit_course_details(self):
+        """
+        User with COURSE_EDITOR role can update course details.
         COURSE_EDITOR does not have permission to edit schedule fields.
         """
 
@@ -254,6 +311,10 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
         response = self.authorized_client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         current_course_details = response.json()
+        # This field is flagged as a details update because of a type mismatch:
+        # the GET response returns an invalid string, while the stored value has a different type.
+        # As a result, the equality check fails even though the values are logically the same.
+        current_course_details["certificates_display_behavior"] = "end"
 
         # Update the course details with new values,
         # keeping schedule fields the same to ensure we are only
@@ -268,9 +329,9 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_put_authorized_user_can_edit_course_schedule(self):
+    def test_course_staff_can_edit_course_schedule(self):
         """
-        Authorized user with COURSE_STAFF role can update course schedule.
+        User with COURSE_STAFF role can update course schedule.
         Only COURSE_STAFF and COURSE_ADMIN can edit schedule related fields.
         """
         self.add_user_to_role_in_course(
@@ -284,6 +345,10 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
         response = self.authorized_client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         current_course_details = response.json()
+        # This field is flagged as a details update because of a type mismatch:
+        # the GET response returns an invalid string, while the stored value has a different type.
+        # As a result, the equality check fails even though the values are logically the same.
+        current_course_details["certificates_display_behavior"] = "end"
 
         # Update the course details with new values,
         # changing schedule fields to ensure we are only
@@ -298,10 +363,10 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_put_unauthorized_user_can_edit_course_schedule(self):
+    def test_course_editor_cannot_edit_course_schedule(self):
         """
-        Unauthorized user with COURSE_EDITOR role cannot update course schedule.
-        Only COURSE_STAFF and COURSE_ADMIN can edit schedule related fields.
+        User with COURSE_EDITOR role cannot update course schedule.
+        Only COURSE_STAFF and COURSE_ADMIN can edit schedule-related fields.
         """
         self.add_user_to_role_in_course(
             self.authorized_user,
@@ -314,6 +379,10 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
         response = self.authorized_client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         current_course_details = response.json()
+        # This field is flagged as a details update because of a type mismatch:
+        # the GET response returns an invalid string, while the stored value has a different type.
+        # As a result, the equality check fails even though the values are logically the same.
+        current_course_details["certificates_display_behavior"] = "end"
 
         # Update the course details with new values,
         # changing schedule fields to ensure we are only
@@ -328,67 +397,104 @@ class CourseDetailsAuthzViewTest(CourseAuthoringAuthzTestMixin, CourseTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_put_authorized_user_can_edit_course_schedule_and_details(self):
-            """
-            Authorized user with COURSE_STAFF role can update course
-            schedule and details.
-            """
-            self.add_user_to_role_in_course(
-                self.authorized_user,
-                COURSE_STAFF.external_key,
-                self.course.id
-            )
+    def test_course_staff_can_edit_course_schedule_and_details(self):
+        """
+        User with COURSE_STAFF role can update course
+        schedule and details.
+        """
+        self.add_user_to_role_in_course(
+            self.authorized_user,
+            COURSE_STAFF.external_key,
+            self.course.id
+        )
 
-            # Get the current status of the course details to use
-            # as the basis for the update request
-            response = self.authorized_client.get(self.url)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            current_course_details = response.json()
+        # Get the current status of the course details to use
+        # as the basis for the update request
+        response = self.authorized_client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        current_course_details = response.json()
+        # This field is flagged as a details update because of a type mismatch:
+        # the GET response returns an invalid string, while the stored value has a different type.
+        # As a result, the equality check fails even though the values are logically the same.
+        current_course_details["certificates_display_behavior"] = "end"
 
-            # Update the course details with new values,
-            # changing schedule and details fields to ensure user
-            # has permission to edit both
-            current_course_details["end_date"] = "2023-08-01T01:30:00Z"
-            current_course_details["title"] = "Updated Title"
+        # Update the course details with new values,
+        # changing schedule and details fields to ensure user
+        # has permission to edit both
+        current_course_details["end_date"] = "2023-08-01T01:30:00Z"
+        current_course_details["title"] = "Updated Title"
 
-            response = self.authorized_client.put(
-                path=self.url,
-                data=json.dumps(current_course_details),
-                content_type="application/json",
-            )
+        response = self.authorized_client.put(
+            path=self.url,
+            data=json.dumps(current_course_details),
+            content_type="application/json",
+        )
 
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_put_unauthorized_user_can_edit_course_schedule_and_details(self):
-            """
-            Unauthorized user with COURSE_EDITOR role cannot update course
-            schedule and details.
-            """
-            self.add_user_to_role_in_course(
-                self.authorized_user,
-                COURSE_EDITOR.external_key,
-                self.course.id
-            )
+    def test_course_editor_cannot_edit_course_schedule_and_details(self):
+        """
+        User with COURSE_EDITOR role cannot update course
+        schedule or course details.
+        """
+        self.add_user_to_role_in_course(
+            self.authorized_user,
+            COURSE_EDITOR.external_key,
+            self.course.id
+        )
 
-            # Get the current status of the course details to use
-            # as the basis for the update request
-            response = self.authorized_client.get(self.url)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            current_course_details = response.json()
+        # Get the current status of the course details to use
+        # as the basis for the update request
+        response = self.authorized_client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        current_course_details = response.json()
+        # This field is flagged as a details update because of a type mismatch:
+        # the GET response returns an invalid string, while the stored value has a different type.
+        # As a result, the equality check fails even though the values are logically the same.
+        current_course_details["certificates_display_behavior"] = "end"
 
-            # Update the course details with new values,
-            # changing schedule and details fields to ensure user
-            # has permission to edit both
-            current_course_details["end_date"] = "2023-08-01T01:30:00Z"
-            current_course_details["title"] = "Updated Title"
+        # Update the course details with new values,
+        # changing schedule and details fields to ensure user
+        # has permission to edit both
+        current_course_details["end_date"] = "2023-08-01T01:30:00Z"
+        current_course_details["title"] = "Updated Title"
 
-            response = self.authorized_client.put(
-                path=self.url,
-                data=json.dumps(current_course_details),
-                content_type="application/json",
-            )
+        response = self.authorized_client.put(
+            path=self.url,
+            data=json.dumps(current_course_details),
+            content_type="application/json",
+        )
 
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthorized_user_cannot_edit_with_any_change_on_the_payload(self):
+        """
+        An unauthorized user should receive 403 even if the payload contains
+        no changes that do not require edit permissions.
+        """
+        self.add_user_to_role_in_course(
+            self.authorized_user,
+            COURSE_EDITOR.external_key,
+            self.course.id
+        )
+
+        # Get the current status of the course details to use
+        # as the basis for the update request
+        response = self.authorized_client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        current_course_details = response.json()
+        # This field is flagged as a details update because of a type mismatch:
+        # the GET response returns an invalid string, while the stored value has a different type.
+        # As a result, the equality check fails even though the values are logically the same.
+        current_course_details["certificates_display_behavior"] = "end"
+
+        # Update the course details with the same values.
+        response = self.unauthorized_client.put(
+            path=self.url,
+            data=json.dumps(current_course_details),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_put_user_without_role_then_added_can_update(self):
         """
