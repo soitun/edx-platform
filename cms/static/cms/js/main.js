@@ -25,8 +25,10 @@ define([
         _.extend(window.CMS, Backbone.Events);
         Backbone.emulateHTTP = true;
         $.ajaxSetup({
-            headers: {
-                'X-CSRFToken': $.cookie('csrftoken')
+            beforeSend: function(xhr, settings) {
+                if (!(/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) && !this.crossDomain) {
+                    xhr.setRequestHeader('X-CSRFToken', $.cookie('csrftoken'));
+                }
             },
             dataType: 'json',
             content: {
