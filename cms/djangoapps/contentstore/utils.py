@@ -547,6 +547,17 @@ def get_taxonomy_list_url() -> str | None:
     return f'{mfe_base_url}/taxonomies'
 
 
+def get_libraries_list_url() -> str | None:
+    """
+    Gets course authoring microfrontend URL for libraries list view.
+    """
+    mfe_base_url = settings.COURSE_AUTHORING_MICROFRONTEND_URL
+    if not mfe_base_url:
+        return None
+
+    return f'{mfe_base_url}/libraries'
+
+
 def get_taxonomy_tags_widget_url(course_locator=None) -> str | None:
     """
     Gets course authoring microfrontend URL for taxonomy tags drawer widget view.
