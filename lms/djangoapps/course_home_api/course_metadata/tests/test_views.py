@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import ddt
 from django.db import transaction
-from django.urls import reverse
 from django.test.utils import override_settings
+from django.urls import reverse
 from edx_toggles.toggles.testutils import override_waffle_flag
 
 from common.djangoapps.course_modes.models import CourseMode
@@ -16,19 +16,19 @@ from common.djangoapps.student.roles import (
     CourseBetaTesterRole,
     CourseInstructorRole,
     CourseLimitedStaffRole,
-    CourseStaffRole
+    CourseStaffRole,
 )
 from common.djangoapps.student.tests.factories import UserFactory
 from lms.djangoapps.course_home_api.tests.utils import BaseCourseHomeTests
 from lms.djangoapps.courseware.toggles import (
     COURSEWARE_MFE_MILESTONES_STREAK_DISCOUNT,
     COURSEWARE_MICROFRONTEND_PROGRESS_MILESTONES,
-    COURSEWARE_MICROFRONTEND_PROGRESS_MILESTONES_STREAK_CELEBRATION
+    COURSEWARE_MICROFRONTEND_PROGRESS_MILESTONES_STREAK_CELEBRATION,
 )
 from openedx.core.djangoapps.discussions.models import DiscussionsConfiguration
 from openedx.features.enterprise_support.tests.factories import (
     EnterpriseCourseEnrollmentFactory,
-    EnterpriseCustomerUserFactory
+    EnterpriseCustomerUserFactory,
 )
 
 
