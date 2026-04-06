@@ -34,12 +34,12 @@ from common.djangoapps.student.roles import (
     UserBasedRole,
 )
 from common.djangoapps.student.tests.factories import UserFactory
+from openedx.core import toggles as core_toggles
+from openedx.core.djangoapps.authz.tests.mixins import CourseAuthoringAuthzTestMixin
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 from openedx.core.djangoapps.content.course_overviews.tests.factories import CourseOverviewFactory
 from openedx.core.djangoapps.waffle_utils.testutils import WAFFLE_TABLES
 from openedx.core.djangolib.testing.utils import AUTHZ_TABLES
-from openedx.core.djangoapps.authz.tests.mixins import CourseAuthoringAuthzTestMixin
-from openedx.core import toggles as core_toggles
 from xmodule.modulestore import ModuleStoreEnum  # lint-amnesty, pylint: disable=wrong-import-order
 from xmodule.modulestore.tests.django_utils import (
     ModuleStoreTestCase,  # lint-amnesty, pylint: disable=wrong-import-order
@@ -489,7 +489,7 @@ class TestCourseListingAuthz(CourseAuthoringAuthzTestMixin, ModuleStoreTestCase)
 
         self.assertEqual(len(courses), 1)
         self.assertEqual(courses[0].id, course1.id)
-        self.assertEqual(course2.id, course_key_2)
+        self.assertNotIn(course_key_2, {c.id for c in courses})
 
     def test_course_listing_with_course_editor_authz_permission(self):
         """
@@ -518,7 +518,7 @@ class TestCourseListingAuthz(CourseAuthoringAuthzTestMixin, ModuleStoreTestCase)
 
         self.assertEqual(len(courses), 1)
         self.assertEqual(courses[0].id, course1.id)
-        self.assertEqual(course2.id, course_key_2)
+        self.assertNotIn(course_key_2, {c.id for c in courses})
 
     def test_course_listing_without_permissions(self):
         """

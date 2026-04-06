@@ -778,6 +778,7 @@ def course_index(request, course_key):
     block_to_show = request.GET.get("show")
     return redirect(get_course_outline_url(course_key, block_to_show))
 
+
 def _apply_course_query_filters(request, courses):
     """Applies all query filters to the given courses queryset.
     This includes filtering by active/archived status, search query, ordering
@@ -833,6 +834,7 @@ def _get_authz_accessible_courses_list(request):
     }
     return authz_keys
 
+
 def _get_legacy_accessible_courses_list(request):
     """
     List all courses available to the logged in user by
@@ -863,9 +865,10 @@ def _get_legacy_accessible_courses_list(request):
 
     if org_accesses:
         # Getting courses from user global orgs
-        all_courses_give_an_org = CourseOverview.get_all_courses(orgs=org_accesses).values_list("id", flat=True)
-        group_keys.update(all_courses_give_an_org)
+        org_course_keys = CourseOverview.get_all_courses(orgs=org_accesses).values_list("id", flat=True)
+        group_keys.update(org_course_keys)
     return group_keys
+
 
 def _get_candidate_course_keys(request):
     """
