@@ -24,60 +24,59 @@ from ..serializers import CourseDetailsSerializer
 
 
 def _classify_update(payload: dict, course_key: CourseKey) -> tuple[bool, bool]:
-        """
-        Determine whether the payload is updating schedule fields, detail fields, or both
-        for the course identified by course_key.
+    """
+    Determine whether the payload is updating schedule fields, detail fields, or both
+    for the course identified by course_key.
 
-        Returns:
-            (is_schedule_update, is_details_update)
-        """
-        schedule_fields = frozenset({"start_date", "end_date", "enrollment_start", "enrollment_end"})
+    Returns:
+        (is_schedule_update, is_details_update)
+    """
+    schedule_fields = frozenset({"start_date", "end_date", "enrollment_start", "enrollment_end"})
 
-        course_details = CourseDetails.fetch(course_key)
+    course_details = CourseDetails.fetch(course_key)
 
-        is_schedule_update = False
-        is_details_update = False
+    is_schedule_update = False
+    is_details_update = False
 
-        serializer = CourseDetailsSerializer()
+    serializer = CourseDetailsSerializer()
 
-        for field, payload_value in payload.items():
-            # Early exit for efficiency
-            if is_schedule_update and is_details_update:
-                break
+    for field, payload_value in payload.items():
+        # Early exit for efficiency
+        if is_schedule_update and is_details_update:
+            break
 
-            # Ignore unknown fields if needed
-            if field not in serializer.fields:
+        # Ignore unknown fields if needed
+        if field not in serializer.fields:
+            continue
+
+        current_value = getattr(course_details, field, None)
+
+        # Check schedule fields
+        if field in schedule_fields:
+            if is_schedule_update:
+                # Already classified as schedule update, no need to check again
                 continue
+            try:
+                # Convert payload value to internal value for accurate comparison
+                # on date fields
+                if payload_value is not None:
+                    payload_value = serializer.fields[field].to_internal_value(payload_value)
+            except ValidationError as exc:
+                raise ValidationError(
+                    f"Invalid date format for field {field}: {payload_value}"
+                ) from exc
 
-            current_value = getattr(course_details, field, None)
+            if payload_value != current_value:
+                is_schedule_update = True
+        else:
+            # Any non-schedule field counts as details update
+            if is_details_update:
+                # Already classified as details update, no need to check again
+                continue
+            if payload_value != current_value:
+                is_details_update = True
 
-            # Check schedule fields
-            if field in schedule_fields:
-                if is_schedule_update:
-                    # Already classified as schedule update, no need to check again
-                    continue
-
-                try:
-                    # Convert payload value to internal value for accurate comparison
-                    # on date fields
-                    if payload_value is not None:
-                        payload_value = serializer.fields[field].to_internal_value(payload_value)
-                except ValidationError as exc:
-                    raise ValidationError(
-                        f"Invalid date format for field {field}: {payload_value}"
-                    ) from exc
-
-                if payload_value != current_value:
-                    is_schedule_update = True
-            else:
-                # Any non-schedule field counts as details update
-                if is_details_update:
-                    # Already classified as details update, no need to check again
-                    continue
-                if payload_value != current_value:
-                    is_details_update = True
-
-        return is_schedule_update, is_details_update
+    return is_schedule_update, is_details_update
 
 
 @view_auth_classes(is_authenticated=True)
