@@ -3,15 +3,14 @@
 import edx_api_doc_tools as apidocs
 from django.conf import settings
 from opaque_keys.edx.keys import CourseKey
+from openedx_authz.constants.permissions import COURSES_VIEW_COURSE
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from openedx_authz.constants.permissions import COURSES_VIEW_COURSE
-
 from lms.djangoapps.certificates.api import can_show_certificate_available_date_field
-from openedx.core.djangoapps.authz.decorators import user_has_course_permission
 from openedx.core.djangoapps.authz.constants import LegacyAuthoringPermission
+from openedx.core.djangoapps.authz.decorators import user_has_course_permission
 from openedx.core.lib.api.view_utils import DeveloperErrorViewMixin, verify_course_exists, view_auth_classes
 from xmodule.modulestore.django import modulestore
 

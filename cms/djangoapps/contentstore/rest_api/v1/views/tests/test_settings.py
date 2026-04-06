@@ -6,9 +6,8 @@ from unittest.mock import patch
 import ddt
 from django.conf import settings
 from django.urls import reverse
-from rest_framework import status
-
 from openedx_authz.constants.roles import COURSE_EDITOR
+from rest_framework import status
 
 from cms.djangoapps.contentstore.tests.utils import CourseTestCase
 from cms.djangoapps.contentstore.utils import get_proctored_exam_settings_url

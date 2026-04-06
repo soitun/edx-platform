@@ -6,12 +6,12 @@ from unittest.mock import patch
 
 import ddt
 from django.urls import reverse
+from openedx_authz.constants.roles import COURSE_EDITOR, COURSE_STAFF
 from rest_framework import status
 from rest_framework.test import APIClient
-from openedx_authz.constants.roles import COURSE_EDITOR, COURSE_STAFF
 
-from cms.djangoapps.contentstore.tests.utils import CourseTestCase
 from cms.djangoapps.contentstore.rest_api.v1.views.course_details import _classify_update
+from cms.djangoapps.contentstore.tests.utils import CourseTestCase
 from openedx.core.djangoapps.authz.tests.mixins import CourseAuthoringAuthzTestMixin
 
 from ...mixins import PermissionAccessMixin
