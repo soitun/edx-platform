@@ -854,7 +854,6 @@ def _get_legacy_accessible_courses_list(request):
         if access.course_id is not None:
             course_key = access.course_id
             if not isinstance(course_key, CourseKey):
-                # CCX courses cannot be edited in Studio and should not be shown in this dashboard.
                 course_key = CourseKey.from_string(str(course_key))
             group_keys.add(course_key)
         elif access.org:
