@@ -3,16 +3,18 @@
 import edx_api_doc_tools as apidocs
 from django.core.exceptions import ValidationError
 from opaque_keys.edx.keys import CourseKey
+from openedx_authz.constants.permissions import (
+        COURSES_EDIT_DETAILS,
+        COURSES_EDIT_SCHEDULE,
+        COURSES_VIEW_SCHEDULE_AND_DETAILS,
+)
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.djangoapps.util.json_request import JsonResponseBadRequest
-from openedx_authz.constants.permissions import (
-    COURSES_VIEW_SCHEDULE_AND_DETAILS, COURSES_EDIT_SCHEDULE, COURSES_EDIT_DETAILS
-)
-from openedx.core.djangoapps.authz.decorators import user_has_course_permission
 from openedx.core.djangoapps.authz.constants import LegacyAuthoringPermission
+from openedx.core.djangoapps.authz.decorators import user_has_course_permission
 from openedx.core.djangoapps.models.course_details import CourseDetails
 from openedx.core.lib.api.view_utils import DeveloperErrorViewMixin, verify_course_exists, view_auth_classes
 from xmodule.modulestore.django import modulestore
