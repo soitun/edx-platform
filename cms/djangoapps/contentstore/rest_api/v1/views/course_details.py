@@ -31,7 +31,19 @@ def _classify_update(payload: dict, course_key: CourseKey) -> tuple[bool, bool]:
     Returns:
         (is_schedule_update, is_details_update)
     """
-    schedule_fields = frozenset({"start_date", "end_date", "enrollment_start", "enrollment_end"})
+
+    # Define which fields are considered schedule fields.
+    # Any field not in this set that is being updated will be considered a details update.
+    schedule_fields = frozenset(
+        {"start_date", "end_date", "enrollment_start", "enrollment_end", "certificate_available_date"}
+    )
+
+    # Define which fields are date fields to ensure proper comparison after parsing.
+    # At this time, all schedule fields are also date fields, but this is defined separately for clarity
+    # and in case this changes in the future.
+    date_fields = frozenset(
+        {"start_date", "end_date", "enrollment_start", "enrollment_end", "certificate_available_date"}
+    )
 
     course_details = CourseDetails.fetch(course_key)
 
@@ -51,11 +63,8 @@ def _classify_update(payload: dict, course_key: CourseKey) -> tuple[bool, bool]:
 
         current_value = getattr(course_details, field, None)
 
-        # Check schedule fields
-        if field in schedule_fields:
-            if is_schedule_update:
-                # Already classified as schedule update, no need to check again
-                continue
+        if field in date_fields:
+            # For date fields, we need to parse the payload value to compare it with the current value
             try:
                 # Convert payload value to internal value for accurate comparison
                 # on date fields
@@ -66,6 +75,11 @@ def _classify_update(payload: dict, course_key: CourseKey) -> tuple[bool, bool]:
                     f"Invalid date format for field {field}: {payload_value}"
                 ) from exc
 
+        # Check schedule fields
+        if field in schedule_fields:
+            if is_schedule_update:
+                # Already classified as schedule update, no need to check again
+                continue
             if payload_value != current_value:
                 is_schedule_update = True
         else:
