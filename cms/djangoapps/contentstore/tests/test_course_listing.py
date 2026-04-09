@@ -747,7 +747,7 @@ class TestCourseListingAuthz(CourseAuthoringAuthzTestMixin, ModuleStoreTestCase)
                 *(c.id for c in legacy_courses),
             }
 
-            self.assertEqual(result_ids, expected_ids)
+            self.assertEqual(result_ids, expected_ids)  # noqa: PT009
 
     def test_course_listing_with_org_scope_with_toggle(self):
         """
@@ -776,7 +776,7 @@ class TestCourseListingAuthz(CourseAuthoringAuthzTestMixin, ModuleStoreTestCase)
             result_ids = {c.id for c in courses}
 
             expected = {authz_keys[0], authz_keys[2]}
-            self.assertEqual(result_ids, expected)
+            self.assertEqual(result_ids, expected)  # noqa: PT009
 
     def test_course_listing_with_org_scope_without_courses(self):
         """
@@ -800,7 +800,7 @@ class TestCourseListingAuthz(CourseAuthoringAuthzTestMixin, ModuleStoreTestCase)
         ):
             courses, _ = get_courses_accessible_to_user(request)
 
-            self.assertEqual(courses, [])
+            self.assertEqual(courses, [])  # noqa: PT009
 
     def test_course_listing_with_org_scope_fetched_once(self):
         """
