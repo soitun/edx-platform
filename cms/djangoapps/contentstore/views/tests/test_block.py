@@ -3533,7 +3533,7 @@ class TestGetMetadataWithProblemDefaults(ModuleStoreTestCase):
         xblock = self._make_problem()
         with patch.object(xblock, 'max_score', return_value=3.0):
             metadata = _get_metadata_with_problem_defaults(xblock)
-        self.assertEqual(metadata.get('weight'), 3.0)
+        assert metadata.get('weight') == 3.0
 
     def test_problem_without_weight_max_score_zero_does_not_inject(self):
         """
@@ -3542,7 +3542,7 @@ class TestGetMetadataWithProblemDefaults(ModuleStoreTestCase):
         xblock = self._make_problem()
         with patch.object(xblock, 'max_score', return_value=0):
             metadata = _get_metadata_with_problem_defaults(xblock)
-        self.assertNotIn('weight', metadata)
+        assert 'weight' not in metadata
 
     # ------------------------------------------------------------------
     # Problem blocks – weight already present in stored metadata
@@ -3555,7 +3555,7 @@ class TestGetMetadataWithProblemDefaults(ModuleStoreTestCase):
         xblock = self._make_problem(weight=5.0)
         with patch.object(xblock, 'max_score', return_value=2.0):
             metadata = _get_metadata_with_problem_defaults(xblock)
-        self.assertEqual(metadata.get('weight'), 5.0)
+        assert metadata.get('weight') == 5.0
 
     # ------------------------------------------------------------------
     # Non-problem blocks
@@ -3575,8 +3575,8 @@ class TestGetMetadataWithProblemDefaults(ModuleStoreTestCase):
         xblock = modulestore().get_item(video.location)
         metadata_before = dict(get_block_info(xblock).get('metadata', {}))
         metadata_result = _get_metadata_with_problem_defaults(xblock)
-        self.assertEqual(metadata_result, metadata_before)
-        self.assertNotIn('weight', metadata_result)
+        assert metadata_result == metadata_before
+        assert 'weight' not in metadata_result
 
 
 @patch.dict("django.conf.settings.FEATURES", {"ENABLE_SPECIAL_EXAMS": True})
