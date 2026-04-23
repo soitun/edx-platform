@@ -713,7 +713,7 @@ factory-boy==3.3.3
     # via -r requirements/edx/testing.in
 faker==40.15.0
     # via factory-boy
-fastapi==0.136.0
+fastapi==0.136.1
     # via pact-python
 fastavro==1.12.1
     # via
@@ -1059,7 +1059,7 @@ openedx-atlas==0.7.0
     #   enterprise-integrated-channels
     #   openedx-authz
     #   openedx-forum
-openedx-authz==1.13.0
+openedx-authz==1.14.0
     # via -r requirements/edx/base.txt
 openedx-calc==5.0.0
     # via
