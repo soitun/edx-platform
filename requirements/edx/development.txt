@@ -916,7 +916,7 @@ faker==40.15.0
     # via
     #   -r requirements/edx/testing.txt
     #   factory-boy
-fastapi==0.136.0
+fastapi==0.136.1
     # via
     #   -r requirements/edx/testing.txt
     #   pact-python
@@ -1385,7 +1385,7 @@ openedx-atlas==0.7.0
     #   enterprise-integrated-channels
     #   openedx-authz
     #   openedx-forum
-openedx-authz==1.13.0
+openedx-authz==1.14.0
     # via
     #   -r requirements/edx/doc.txt
     #   -r requirements/edx/testing.txt
