@@ -9,6 +9,7 @@ import logging
 from urllib.parse import urlparse
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.utils.html import escape
 from django.utils.translation import gettext as _
 from edx_when.api import is_enabled_for_course
@@ -16,6 +17,7 @@ from rest_framework import serializers
 
 from common.djangoapps.course_modes.models import CourseMode
 from common.djangoapps.student.models import CourseEnrollment
+from common.djangoapps.student.models.user import get_user_by_username_or_email
 from common.djangoapps.student.roles import (
     CourseFinanceAdminRole,
     CourseInstructorRole,
@@ -36,6 +38,7 @@ from xmodule.modulestore.django import modulestore
 
 from .tools import DashboardError, get_student_from_identifier, parse_datetime
 
+User = get_user_model()
 log = logging.getLogger(__name__)
 
 
@@ -81,6 +84,9 @@ class CourseInformationSerializerV2(serializers.Serializer):
     )
     analytics_dashboard_message = serializers.SerializerMethodField(
         help_text="Message about analytics dashboard availability"
+    )
+    certificates_enabled = serializers.SerializerMethodField(
+        help_text="Whether certificate management features are enabled for this course"
     )
 
     @staticmethod
@@ -469,6 +475,14 @@ class CourseInformationSerializerV2(serializers.Serializer):
         """Get analytics dashboard availability message."""
         return get_analytics_dashboard_message(data['course'].id)
 
+    def get_certificates_enabled(self, data):
+        """Check if certificate management features are enabled."""
+        from lms.djangoapps.certificates import api as certs_api
+
+        course_key = data['course'].id
+        # Check if certificate generation is enabled (not available for CCX courses)
+        return certs_api.is_certificate_generation_enabled() and not hasattr(course_key, 'ccx')
+
 
 class InstructorTaskSerializer(serializers.Serializer):
     """Serializer for instructor task details."""
@@ -626,6 +640,9 @@ class IssuedCertificateSerializer(serializers.Serializer):
         allow_null=True,
         help_text="Date when certificate was invalidated in ISO 8601 format"
     )
+    invalidation_note = serializers.SerializerMethodField(
+        help_text="Notes about the invalidation"
+    )
 
     def get_enrollment_track(self, obj):
         """Get enrollment track from context."""
@@ -667,6 +684,12 @@ class IssuedCertificateSerializer(serializers.Serializer):
         invalidation_info = invalidation_dict.get(obj.user_id)
         return invalidation_info['created'] if invalidation_info else None
 
+    def get_invalidation_note(self, obj):
+        """Get invalidation notes from invalidation data in context."""
+        invalidation_dict = self.context.get('invalidation_dict', {})
+        invalidation_info = invalidation_dict.get(obj.user_id)
+        return invalidation_info.get('notes', '') if invalidation_info else ''
+
 
 class CertificateGenerationHistorySerializer(serializers.Serializer):
     """
@@ -693,6 +716,94 @@ class CertificateGenerationHistorySerializer(serializers.Serializer):
         return str(obj.get_certificate_generation_candidates())
 
 
+class ToggleCertificateGenerationSerializer(serializers.Serializer):
+    """
+    Serializer for toggling certificate generation request.
+    """
+    enabled = serializers.BooleanField(
+        required=True,
+        help_text="Whether to enable or disable certificate generation"
+    )
+
+
+class CertificateExceptionSerializer(serializers.Serializer):
+    """
+    Serializer for granting certificate exceptions (bulk).
+    """
+    learners = serializers.ListField(
+        child=serializers.CharField(max_length=255, allow_blank=False),
+        allow_empty=False,
+        max_length=1000,
+        help_text="List of usernames or email addresses of learners to grant exceptions"
+    )
+    notes = serializers.CharField(
+        max_length=1000,
+        required=False,
+        allow_blank=True,
+        default='',
+        help_text="Notes about why the exception is being granted"
+    )
+
+
+class CertificateInvalidationSerializer(serializers.Serializer):
+    """
+    Serializer for invalidating certificates (bulk).
+    """
+    learners = serializers.ListField(
+        child=serializers.CharField(max_length=255, allow_blank=False),
+        allow_empty=False,
+        max_length=1000,
+        help_text="List of usernames or email addresses of learners to invalidate certificates"
+    )
+    notes = serializers.CharField(
+        max_length=1000,
+        required=False,
+        allow_blank=True,
+        default='',
+        help_text="Notes about why the certificate is being invalidated"
+    )
+
+
+class RemoveCertificateExceptionSerializer(serializers.Serializer):
+    """
+    Serializer for removing a certificate exception.
+    """
+    username = serializers.CharField(
+        required=True,
+        max_length=255,
+        allow_blank=False,
+        help_text="Username or email address of the learner"
+    )
+
+    def validate_username(self, value):
+        """Validate and resolve username/email to user object."""
+        try:
+            user = get_user_by_username_or_email(value)
+            return user
+        except User.DoesNotExist as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+
+
+class RemoveCertificateInvalidationSerializer(serializers.Serializer):
+    """
+    Serializer for re-validating a certificate (removing invalidation).
+    """
+    username = serializers.CharField(
+        required=True,
+        max_length=255,
+        allow_blank=False,
+        help_text="Username or email address of the learner"
+    )
+
+    def validate_username(self, value):
+        """Validate and resolve username/email to user object."""
+        try:
+            user = get_user_by_username_or_email(value)
+            return user
+        except User.DoesNotExist as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+
+
 class RegenerateCertificatesSerializer(serializers.Serializer):
     """
     Serializer for regenerating certificates request.
@@ -715,6 +826,28 @@ class RegenerateCertificatesSerializer(serializers.Serializer):
         default='all',
         help_text="Student set filter"
     )
+
+
+class LearnerInputSerializer(serializers.Serializer):
+    """
+    Serializer for validating learner identifier (username or email).
+    """
+    email_or_username = serializers.CharField(
+        required=True,
+        max_length=255,
+        allow_blank=False,
+        help_text="Username or email address of the learner"
+    )
+
+    def validate_email_or_username(self, value):
+        """Validate and resolve username/email to user object."""
+        try:
+            user = get_user_by_username_or_email(value)
+            return user
+        except User.DoesNotExist as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+        except User.MultipleObjectsReturned as exc:
+            raise serializers.ValidationError('Multiple learners found for the given identifier') from exc
 
 
 class CourseEnrollmentSerializerV2(serializers.Serializer):
