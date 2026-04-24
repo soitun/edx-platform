@@ -2418,10 +2418,9 @@ class CourseTeamRolesView(DeveloperErrorViewMixin, APIView):
 
         * 200: OK
         * 401: User is not authenticated
-        * 403: User lacks instructor permissions
+        * 403: User lacks course team management permissions (requires instructor or discussion Administrator role)
     """
-    permission_classes = (IsAuthenticated, permissions.InstructorPermission)
-    permission_name = permissions.EDIT_COURSE_ACCESS
+    permission_classes = (IsAuthenticated, permissions.CourseTeamPermission)
 
     def get(self, request, course_id):
         """Return the list of available course team roles for this course."""
@@ -2544,11 +2543,10 @@ class CourseTeamView(DeveloperErrorViewMixin, APIView):
         * 200: OK (GET, POST - role granted/revoked)
         * 400: Invalid parameters
         * 401: User is not authenticated
-        * 403: User lacks instructor permissions
+        * 403: User lacks course team management permissions (requires instructor or discussion Administrator role)
         * 404: Course not found
     """
-    permission_classes = (IsAuthenticated, permissions.InstructorPermission)
-    permission_name = permissions.EDIT_COURSE_ACCESS
+    permission_classes = (IsAuthenticated, permissions.CourseTeamPermission)
 
     def get(self, request, course_id):
         """
@@ -2633,6 +2631,12 @@ class CourseTeamView(DeveloperErrorViewMixin, APIView):
         rolename = serializer.validated_data['role']
         action = serializer.validated_data['action']
 
+        if rolename == 'instructor' and not has_access(request.user, 'instructor', course):
+            return Response(
+                {'error': _('Managing the instructor role requires instructor access.')},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         results = []
         for identifier in identifiers:
             error = False
@@ -2712,12 +2716,11 @@ class CourseTeamMemberView(DeveloperErrorViewMixin, APIView):
         * 200: Role(s) revoked successfully
         * 400: Invalid parameters
         * 401: User is not authenticated
-        * 403: User lacks instructor permissions
+        * 403: User lacks course team management permissions (requires instructor or discussion Administrator role)
         * 404: Course or user not found
         * 409: Cannot remove own instructor access
     """
-    permission_classes = (IsAuthenticated, permissions.InstructorPermission)
-    permission_name = permissions.EDIT_COURSE_ACCESS
+    permission_classes = (IsAuthenticated, permissions.CourseTeamPermission)
 
     def delete(self, request, course_id, email_or_username):
         """Revoke one or more course roles from a user."""
@@ -2729,6 +2732,12 @@ class CourseTeamMemberView(DeveloperErrorViewMixin, APIView):
             return Response(revoke_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         roles = revoke_serializer.validated_data['roles']
+
+        if 'instructor' in roles and not has_access(request.user, 'instructor', course):
+            return Response(
+                {'error': _('Managing the instructor role requires instructor access.')},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         try:
             user = get_student_from_identifier(email_or_username)
