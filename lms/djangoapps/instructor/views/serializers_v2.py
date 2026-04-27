@@ -34,6 +34,7 @@ from lms.djangoapps.instructor import permissions
 from lms.djangoapps.instructor.access import FORUM_ROLES, ROLES
 from lms.djangoapps.instructor.views.instructor_dashboard import get_analytics_dashboard_message
 from openedx.core.djangoapps.django_comment_common.models import FORUM_ROLE_ADMINISTRATOR
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
 from xmodule.modulestore.django import modulestore
 
 from .tools import DashboardError, get_student_from_identifier, parse_datetime
@@ -76,6 +77,9 @@ class CourseInformationSerializerV2(serializers.Serializer):
     )
     studio_grading_url = serializers.SerializerMethodField(
         help_text="URL to the Studio grading settings page for the course (null if not configured)"
+    )
+    admin_console_url = serializers.SerializerMethodField(
+        help_text="URL to the admin console (requires instructor access and MFE configuration, null if not accessible)"
     )
     permissions = serializers.SerializerMethodField(help_text="User permissions for instructor dashboard features")
     tabs = serializers.SerializerMethodField(help_text="List of course tabs with configuration and display information")
@@ -462,10 +466,27 @@ class CourseInformationSerializerV2(serializers.Serializer):
     def get_studio_grading_url(self, data):
         """Get Studio MFE grading settings URL for the course."""
         course_key = data['course'].id
-        mfe_base_url = getattr(settings, 'COURSE_AUTHORING_MICROFRONTEND_URL', None)
-        if mfe_base_url:
-            return f'{mfe_base_url}/course/{course_key}/settings/grading'
-        return None
+        mfe_base_url = configuration_helpers.get_value(
+            'COURSE_AUTHORING_MICROFRONTEND_URL',
+            getattr(settings, 'COURSE_AUTHORING_MICROFRONTEND_URL', None)
+        )
+        if not mfe_base_url:
+            return None
+        return f'{mfe_base_url}/course/{course_key}/settings/grading'
+
+    def get_admin_console_url(self, data):
+        """Get admin console URL (requires instructor access and MFE configuration, null if not accessible)."""
+        request = data['request']
+        has_instructor_access = has_access(request.user, 'instructor', data['course'])
+        mfe_base_url = configuration_helpers.get_value(
+            'ADMIN_CONSOLE_MICROFRONTEND_URL',
+            getattr(settings, 'ADMIN_CONSOLE_MICROFRONTEND_URL', None)
+        )
+
+        has_permissions = request.user.is_staff or has_instructor_access
+        if not mfe_base_url or not has_permissions:
+            return None
+        return f'{mfe_base_url}/authz'
 
     def get_disable_buttons(self, data):
         """Check if buttons should be disabled for large courses."""

@@ -1905,6 +1905,16 @@ ENABLE_DYNAMIC_REGISTRATION_FIELDS = False
 # .. setting_description: Base URL of the micro-frontend-based learner home page.
 LEARNER_HOME_MICROFRONTEND_URL = None
 
+# .. setting_name: COURSE_AUTHORING_MICROFRONTEND_URL
+# .. setting_default: None
+# .. setting_description: Base URL of the micro-frontend-based course authoring (Studio) page.
+COURSE_AUTHORING_MICROFRONTEND_URL = None
+
+# .. setting_name: ADMIN_CONSOLE_MICROFRONTEND_URL
+# .. setting_default: None
+# .. setting_description: Base URL of the micro-frontend-based admin console page.
+ADMIN_CONSOLE_MICROFRONTEND_URL = None
+
 ################################## Swift ###################################
 
 SWIFT_USERNAME = None
