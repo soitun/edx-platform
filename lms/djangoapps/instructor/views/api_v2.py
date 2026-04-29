@@ -88,6 +88,7 @@ from lms.djangoapps.courseware.tabs import get_course_tab_list
 from lms.djangoapps.instructor import enrollment, permissions
 from lms.djangoapps.instructor.access import (
     FORUM_ROLES,
+    INSTRUCTOR_DASHBOARD_ROLE_SORT_ORDER,
     ROLE_DISPLAY_NAMES,
     ROLES,
     allow_access,
@@ -3080,11 +3081,11 @@ class CourseTeamRolesView(DeveloperErrorViewMixin, APIView):
         {
             "course_id": "course-v1:edX+DemoX+Demo_Course",
             "results": [
-                {"role": "beta", "display_name": "Beta Tester"},
-                {"role": "data_researcher", "display_name": "Data Researcher"},
-                {"role": "instructor", "display_name": "Admin"},
+                {"role": "staff", "display_name": "Staff"},
                 {"role": "limited_staff", "display_name": "Limited Staff"},
-                {"role": "staff", "display_name": "Staff"}
+                {"role": "instructor", "display_name": "Admin"},
+                {"role": "beta", "display_name": "Beta Tester"},
+                {"role": "data_researcher", "display_name": "Data Researcher"}
             ]
         }
 
@@ -3112,15 +3113,22 @@ class CourseTeamRolesView(DeveloperErrorViewMixin, APIView):
         if editable and not has_access(request.user, 'instructor', course):
             roles = set(FORUM_ROLES)
 
+        role_order = {role: i for i, role in enumerate(INSTRUCTOR_DASHBOARD_ROLE_SORT_ORDER)}
+
         results = [
             {'role': rolename, 'display_name': str(ROLE_DISPLAY_NAMES[rolename])}
-            for rolename in sorted(roles)
+            for rolename in sorted(
+                roles, key=lambda r: role_order.get(r, len(INSTRUCTOR_DASHBOARD_ROLE_SORT_ORDER))
+            )
         ]
 
-        return Response({
-            'course_id': str(course_key),
-            'results': results,
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                'course_id': str(course_key),
+                'results': results,
+            },
+            status=status.HTTP_200_OK
+        )
 
 
 @method_decorator(cache_control(no_cache=True, no_store=True, must_revalidate=True), name='dispatch')
