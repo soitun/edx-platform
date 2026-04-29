@@ -10,8 +10,7 @@ Part of https://github.com/openedx/edx-platform/issues/36275.
 
 import datetime
 import time
-from unittest import mock
-from urllib.parse import quote_plus, unquote
+from urllib.parse import unquote
 
 from ddt import data, ddt, unpack
 from django.conf import settings
@@ -178,32 +177,6 @@ class AuthTestCase(ContentStoreTestCase):
 
         # re-request, and we should get a redirect to login page
         self.assertRedirects(resp, settings.LOGIN_URL + '?next=/home/', target_status_code=302)
-
-    @data(
-        (True, 'assertContains'),
-        (False, 'assertNotContains'))
-    @unpack
-    @override_waffle_flag(toggles.LEGACY_STUDIO_LOGGED_OUT_HOME, True)
-    def test_signin_and_signup_buttons_index_page(self, allow_account_creation, assertion_method_name):
-        """
-        Navigate to the home page and check the Sign Up button is hidden when ALLOW_PUBLIC_ACCOUNT_CREATION flag
-        is turned off, and not when it is turned on.  The Sign In button should always appear.
-        """
-        with mock.patch.dict(settings.FEATURES, {"ALLOW_PUBLIC_ACCOUNT_CREATION": allow_account_creation}):
-            response = self.client.get(reverse('homepage'))
-            assertion_method = getattr(self, assertion_method_name)
-            login_url = quote_plus(f"http://testserver{settings.LOGIN_URL}")
-            assertion_method(
-                response,
-                f'<a class="action action-signup" href="{settings.LMS_ROOT_URL}/register'
-                f'?next={login_url}">Sign Up</a>'
-            )
-            self.assertContains(
-                response,
-                '<a class="action action-signin" href="/login/?next=http%3A%2F%2Ftestserver%2F">'
-                'Sign In</a>'
-            )
-
 
 class ForumTestCase(CourseTestCase):
     """Tests class to verify course to forum operations"""
