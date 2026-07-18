@@ -1384,7 +1384,7 @@ def get_course_settings(request, course_key, course_block):
     publisher_enabled = configuration_helpers.get_value_for_org(
         course_block.location.org,
         'ENABLE_PUBLISHER',
-        settings.FEATURES.get('ENABLE_PUBLISHER', False)
+        settings.ENABLE_PUBLISHER
     )
     marketing_enabled = True
     enable_extended_course_details = configuration_helpers.get_value_for_org(
