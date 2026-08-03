@@ -2551,9 +2551,11 @@ FIELD_OVERRIDE_PROVIDERS = ()
 # require student context.
 MODULESTORE_FIELD_OVERRIDE_PROVIDERS = ('openedx.features.content_type_gating.'
                                         'field_override.ContentTypeGatingFieldOverride',)
+# .. setting_name: HOMEPAGE_COURSE_MAX
+# .. setting_default: None
+# .. setting_description: Controls the maximum number of courses displayed on the LMS homepage.
+#    If set to None, all available courses will be shown.
 
-# Sets the maximum number of courses listed on the homepage
-# If set to None, all courses will be listed on the homepage
 HOMEPAGE_COURSE_MAX = None
 
 # .. setting_name: COURSE_MEMBER_API_ENROLLMENT_LIMIT
