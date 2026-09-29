@@ -20,7 +20,7 @@ constraints = [
     { name = "django-oauth-toolkit", specifier = "==1.7.1" },
     { name = "django-stubs", specifier = "<6" },
     { name = "djangorestframework", specifier = "<3.18" },
-    { name = "edx-enterprise", specifier = "==8.14.0" },
+    { name = "edx-enterprise", specifier = "==8.15.0" },
     { name = "elasticsearch", specifier = "==7.9.1" },
     { name = "libsass", specifier = "==0.10.0" },
     { name = "lxml", specifier = "==5.3.2" },
@@ -2024,7 +2024,7 @@ wheels = [
 
 [[package]]
 name = "edx-enterprise"
-version = "8.14.0"
+version = "8.15.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bleach" },
@@ -2077,9 +2077,9 @@ dependencies = [
     { name = "tincan" },
     { name = "unicodecsv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/00/25/0c62f75b47792e3b0abe9ec7a123a1e16d58a6c81264ee893bb67233a32c/edx_enterprise-8.14.0.tar.gz", hash = "sha256:d3760635218cd3ec7b98d68a4d4e2d13a8a13b986bdb388e66e8223a63ecc7c1", size = 5167517, upload-time = "2026-09-17T20:56:02.762Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d2/73/5eeb962f73516797c00291bbed86e3779654b89877753db1e1d03fd1fd59/edx_enterprise-8.15.0.tar.gz", hash = "sha256:5f640e7550ff9e4f4939d0589d1dd407f3fe7730fc00a88a4d59024ad60545c5", size = 5168656, upload-time = "2026-09-28T23:09:43.259Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ed/17/7b15595a2ea0b185d41bdb889504ec820eeb182fdb6e4e14b73bfddacf4d/edx_enterprise-8.14.0-py3-none-any.whl", hash = "sha256:fc1d9ba9a1ddf23506a5713eec8426175cc1cf7768a3844c3b76a0fe9b5811f6", size = 5561615, upload-time = "2026-09-17T20:55:59.604Z" },
+    { url = "https://files.pythonhosted.org/packages/b0/21/ac41e2b0a3a575c93caf36352f3c99dd1b0b147189cc15eed077191329fb/edx_enterprise-8.15.0-py3-none-any.whl", hash = "sha256:5bfda1d639f6f3d90bef64b896d61d46a6980b7227bf246afe5fe98008afd913", size = 5563230, upload-time = "2026-09-28T23:09:39.935Z" },
 ]
 
 [[package]]
